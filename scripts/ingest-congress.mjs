@@ -1,0 +1,170 @@
+#!/usr/bin/env node
+// FiveVote — Congress.gov ingestion connector
+// Pulls recent bills, writes raw payloads to source_artifacts, upserts bills + actions.
+//
+// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CONGRESS_API_KEY
+// Optional: CONGRESS_LIMIT (default 50), CONGRESS_NUMBER (e.g. 119)
+//
+// Get a free key at https://api.congress.gov/sign-up.
+
+import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'node:crypto';
+
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const API_KEY = process.env.CONGRESS_API_KEY;
+const LIMIT = Number(process.env.CONGRESS_LIMIT ?? 50);
+const CONGRESS = process.env.CONGRESS_NUMBER ?? '119';
+const US_FEDERAL_JURISDICTION_ID = '11111111-1111-1111-1111-111111111111';
+const SOURCE_SYSTEM = 'congress_gov';
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  process.exit(1);
+}
+if (!API_KEY) {
+  console.error('Missing CONGRESS_API_KEY (get one at https://api.congress.gov/sign-up)');
+  process.exit(1);
+}
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+const sha = (s) => createHash('sha256').update(s).digest('hex');
+
+async function fetchJson(url) {
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} from ${url}`);
+  return res.json();
+}
+
+function deriveBillFields(detail) {
+  const bill = detail.bill ?? detail;
+  const number = bill.number ?? bill.billNumber;
+  const type = (bill.type ?? bill.billType ?? '').toLowerCase();
+  const congress = bill.congress;
+  const chamberMap = { hr: 'House', s: 'Senate', hjres: 'House', sjres: 'Senate', hconres: 'House', sconres: 'Senate', hres: 'House', sres: 'Senate' };
+  const chamber = chamberMap[type] ?? bill.originChamber ?? null;
+
+  return {
+    source_id: `${congress}-${type}-${number}`,
+    session_label: `${congress}th Congress`,
+    chamber,
+    bill_number: `${type.toUpperCase()}.${number}`,
+    bill_type: type,
+    title_en: bill.title ?? null,
+    summary_en: bill.summaries?.summaries?.[0]?.text?.replace(/<[^>]+>/g, '') ?? null,
+    status_code: bill.latestAction?.actionTime ? null : null,
+    introduced_at: bill.introducedDate ? new Date(bill.introducedDate).toISOString() : null,
+    latest_action_at: bill.latestAction?.actionDate
+      ? new Date(bill.latestAction.actionDate).toISOString()
+      : null,
+    latest_action_text: bill.latestAction?.text ?? null,
+    source_url: bill.url
+      ? bill.url.replace('https://api.congress.gov/v3/', 'https://www.congress.gov/bill/').replace(/\?.*$/, '')
+      : null,
+  };
+}
+
+async function recordArtifact(url, payload) {
+  const body = JSON.stringify(payload);
+  const hash = sha(body);
+  const { data, error } = await sb
+    .from('source_artifacts')
+    .upsert(
+      {
+        source_system: SOURCE_SYSTEM,
+        source_id: url,
+        fetch_url: url,
+        content_type: 'application/json',
+        content_hash: hash,
+        parse_status: 'parsed',
+        license_code: 'us_public_domain',
+        payload,
+      },
+      { onConflict: 'source_system,source_id,content_hash', ignoreDuplicates: false },
+    )
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+async function ingestBill(listEntry) {
+  const detailUrl = listEntry.url + (listEntry.url.includes('?') ? '&' : '?') + `api_key=${API_KEY}`;
+  const detail = await fetchJson(detailUrl);
+  const sanitized = JSON.parse(JSON.stringify(detail));
+  const artifactId = await recordArtifact(listEntry.url, sanitized);
+  const fields = deriveBillFields(detail);
+
+  const row = {
+    jurisdiction_id: US_FEDERAL_JURISDICTION_ID,
+    source_system: SOURCE_SYSTEM,
+    is_official: true,
+    ...fields,
+  };
+
+  const { data: bill, error: billErr } = await sb
+    .from('bills')
+    .upsert(row, { onConflict: 'source_system,source_id' })
+    .select('id')
+    .single();
+  if (billErr) throw billErr;
+
+  // Pull recent actions for richer detail. Congress.gov actions endpoint.
+  const actionsUrl = `${listEntry.url.replace(/\?.*$/, '')}/actions?api_key=${API_KEY}&limit=20`;
+  try {
+    const actions = await fetchJson(actionsUrl);
+    const items = actions.actions ?? [];
+    if (items.length) {
+      const actionRows = items
+        .filter((a) => a.actionDate)
+        .map((a) => ({
+          bill_id: bill.id,
+          occurred_at: new Date(`${a.actionDate}T${a.actionTime ?? '00:00:00'}`).toISOString(),
+          chamber: a.chamber ?? null,
+          action_code: a.actionCode ?? null,
+          action_text: a.text ?? '',
+          source_artifact_id: artifactId,
+        }));
+      if (actionRows.length) {
+        // Replace recent actions for simplicity. (For production: dedupe properly.)
+        await sb.from('bill_actions').delete().eq('bill_id', bill.id);
+        const { error: actErr } = await sb.from('bill_actions').insert(actionRows);
+        if (actErr) throw actErr;
+      }
+    }
+  } catch (err) {
+    console.warn(`  ! actions fetch failed for ${fields.bill_number}: ${err.message}`);
+  }
+
+  return fields.bill_number;
+}
+
+async function main() {
+  console.log(`Fetching up to ${LIMIT} recent bills from ${CONGRESS}th Congress...`);
+  const listUrl = `https://api.congress.gov/v3/bill/${CONGRESS}?api_key=${API_KEY}&limit=${LIMIT}&sort=updateDate+desc&format=json`;
+  const list = await fetchJson(listUrl);
+  const bills = list.bills ?? [];
+  console.log(`Got ${bills.length} bills. Ingesting...`);
+
+  let ok = 0;
+  let fail = 0;
+  for (const b of bills) {
+    try {
+      const num = await ingestBill(b);
+      ok += 1;
+      console.log(`  ✓ ${num}`);
+    } catch (err) {
+      fail += 1;
+      console.error(`  ✗ ${b.number}: ${err.message}`);
+    }
+  }
+  console.log(`Done. ${ok} ok, ${fail} failed.`);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
