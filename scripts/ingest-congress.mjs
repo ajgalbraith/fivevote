@@ -33,6 +33,42 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 
+// Map Congress.gov CRS policy area name → our issue_tags slug.
+// Subset of https://www.congress.gov/help/policy-area-terms.
+const POLICY_AREA_TO_SLUG = {
+  'Health': 'health',
+  'Education': 'education',
+  'Crime and Law Enforcement': 'justice',
+  'Civil Rights and Liberties, Minority Issues': 'civil-rights',
+  'Environmental Protection': 'environment',
+  'Immigration': 'immigration',
+  'Housing and Community Development': 'housing',
+  'Armed Forces and National Security': 'defense',
+  'Taxation': 'taxation',
+  'Science, Technology, Communications': 'technology',
+  'Transportation and Public Works': 'transportation',
+  'Economics and Public Finance': 'economy',
+  'Finance and Financial Sector': 'economy',
+  'International Affairs': 'foreign-affairs',
+  'Foreign Trade and International Finance': 'foreign-affairs',
+  'Government Operations and Politics': 'government',
+  'Congress': 'government',
+  'Energy': 'energy',
+  'Agriculture and Food': 'agriculture',
+  'Labor and Employment': 'labor',
+  'Native Americans': 'civil-rights',
+};
+
+let TAG_ID_BY_SLUG = null;
+
+async function loadTagIndex() {
+  if (TAG_ID_BY_SLUG) return TAG_ID_BY_SLUG;
+  const { data, error } = await sb.from('issue_tags').select('id, slug');
+  if (error) throw error;
+  TAG_ID_BY_SLUG = Object.fromEntries(data.map((r) => [r.slug, r.id]));
+  return TAG_ID_BY_SLUG;
+}
+
 async function fetchJson(url) {
   const res = await fetch(url, { headers: { accept: 'application/json' } });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} from ${url}`);
@@ -137,6 +173,20 @@ async function ingestBill(listEntry) {
     }
   } catch (err) {
     console.warn(`  ! actions fetch failed for ${fields.bill_number}: ${err.message}`);
+  }
+
+  // Issue tagging from CRS policy area.
+  const policyAreaName = detail.bill?.policyArea?.name;
+  if (policyAreaName) {
+    const slug = POLICY_AREA_TO_SLUG[policyAreaName];
+    if (slug) {
+      const tags = await loadTagIndex();
+      const tagId = tags[slug];
+      if (tagId) {
+        await sb.from('bill_issue_tags').delete().eq('bill_id', bill.id);
+        await sb.from('bill_issue_tags').insert({ bill_id: bill.id, issue_tag_id: tagId });
+      }
+    }
   }
 
   return fields.bill_number;

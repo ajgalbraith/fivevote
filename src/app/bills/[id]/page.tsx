@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Landmark, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft,
+  ExternalLink,
+  Landmark,
+  AlertTriangle,
+  Circle,
+} from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +29,7 @@ export default async function BillDetailPage({
   const { data: bill } = await supabase
     .from('bills')
     .select(
-      'id, bill_number, chamber, session_label, title_en, summary_en, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdiction_id, jurisdictions(name)',
+      'id, bill_number, chamber, session_label, title_en, summary_en, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -36,7 +42,7 @@ export default async function BillDetailPage({
       .select('id, occurred_at, chamber, action_text')
       .eq('bill_id', id)
       .order('occurred_at', { ascending: false })
-      .limit(20),
+      .limit(50),
     supabase
       .from('bill_signal_counts')
       .select('support_count, oppose_count, priority_count')
@@ -55,9 +61,13 @@ export default async function BillDetailPage({
       ).data?.map((r) => r.signal as 'support' | 'oppose' | 'priority') ?? []
     : [];
 
-  const jurisdictionName = Array.isArray(bill.jurisdictions)
-    ? bill.jurisdictions[0]?.name
-    : (bill.jurisdictions as { name?: string } | null)?.name;
+  const jurisdiction = Array.isArray(bill.jurisdictions)
+    ? bill.jurisdictions[0]
+    : (bill.jurisdictions as { name: string; country_code: string; level: string } | null);
+
+  const tags = (bill.bill_issue_tags as { issue_tags: { slug: string; display_en: string } | { slug: string; display_en: string }[] | null }[] | null)
+    ?.map((t) => (Array.isArray(t.issue_tags) ? t.issue_tags[0] : t.issue_tags))
+    .filter((t): t is { slug: string; display_en: string } => !!t) ?? [];
 
   return (
     <div className="space-y-8">
@@ -74,12 +84,16 @@ export default async function BillDetailPage({
           <Badge variant="default" className="gap-1">
             <Landmark className="size-3" /> Official
           </Badge>
+          {jurisdiction ? (
+            <Badge variant="outline" className="font-normal">
+              {jurisdiction.country_code} · {jurisdiction.level} · {jurisdiction.name}
+            </Badge>
+          ) : null}
           <span className="font-mono font-medium text-foreground">{bill.bill_number}</span>
           {bill.chamber ? <span>· {bill.chamber}</span> : null}
           <span>· {bill.session_label}</span>
-          {jurisdictionName ? <span>· {jurisdictionName}</span> : null}
           {bill.status_code ? (
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="secondary" className="ml-auto font-normal">
               {bill.status_code}
             </Badge>
           ) : null}
@@ -87,17 +101,28 @@ export default async function BillDetailPage({
         <h1 className="text-3xl font-semibold leading-tight tracking-tight">
           {bill.title_en ?? '(untitled)'}
         </h1>
-        {bill.source_url ? (
-          <a
-            href={bill.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            View source on {bill.source_system}
-            <ExternalLink />
-          </a>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {tags.map((t) => (
+            <Link
+              key={t.slug}
+              href={`/bills?issue=${t.slug}`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' })}
+            >
+              {t.display_en}
+            </Link>
+          ))}
+          {bill.source_url ? (
+            <a
+              href={bill.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonVariants({ variant: 'outline', size: 'sm', className: 'ml-auto' })}
+            >
+              View source on {bill.source_system}
+              <ExternalLink />
+            </a>
+          ) : null}
+        </div>
       </header>
 
       <Alert>
@@ -123,7 +148,7 @@ export default async function BillDetailPage({
         <>
           <Separator />
           <section className="space-y-2">
-            <h2 className="text-base font-semibold">Summary</h2>
+            <h2 className="text-base font-semibold">Plain-language summary</h2>
             <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
               {bill.summary_en}
             </p>
@@ -134,19 +159,45 @@ export default async function BillDetailPage({
       <Separator />
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold">Recent actions</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">Status timeline</h2>
+          {bill.introduced_at ? (
+            <span className="text-xs text-muted-foreground">
+              Introduced {new Date(bill.introduced_at).toLocaleDateString()}
+            </span>
+          ) : null}
+        </div>
         {actions && actions.length > 0 ? (
           <Card>
-            <CardContent className="divide-y divide-border p-0">
-              {actions.map((a) => (
-                <div key={a.id} className="space-y-1 p-4 text-sm">
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(a.occurred_at).toLocaleString()}
-                    {a.chamber ? ` · ${a.chamber}` : ''}
-                  </div>
-                  <div>{a.action_text}</div>
-                </div>
-              ))}
+            <CardContent className="p-0">
+              <ol className="relative">
+                {actions.map((a, idx) => (
+                  <li
+                    key={a.id}
+                    className="relative flex gap-3 border-b border-border px-4 py-3 last:border-0"
+                  >
+                    <div className="relative flex flex-col items-center pt-1">
+                      <Circle
+                        className={`size-2.5 ${idx === 0 ? 'fill-foreground text-foreground' : 'fill-muted-foreground/50 text-muted-foreground/50'}`}
+                      />
+                      {idx < actions.length - 1 ? (
+                        <span
+                          aria-hidden
+                          className="mt-1 w-px flex-1 bg-border"
+                          style={{ minHeight: 18 }}
+                        />
+                      ) : null}
+                    </div>
+                    <div className="space-y-0.5 pb-1 text-sm">
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(a.occurred_at).toLocaleString()}
+                        {a.chamber ? ` · ${a.chamber}` : ''}
+                      </div>
+                      <div className="leading-snug">{a.action_text}</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
             </CardContent>
           </Card>
         ) : (
