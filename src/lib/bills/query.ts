@@ -83,10 +83,16 @@ export async function queryBills(
   filters: BillFilters,
   limit = 50,
 ): Promise<{ data: BillListRow[]; count: number | null }> {
+  const useInnerJoin =
+    (filters.countries?.length ?? 0) > 0 || (filters.levels?.length ?? 0) > 0;
+  const jurisdictionRel = useInnerJoin
+    ? 'jurisdictions!inner(name, country_code, level)'
+    : 'jurisdictions(name, country_code, level)';
+
   let q = supabase
     .from('bills')
     .select(
-      'id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en))',
+      `id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text, ${jurisdictionRel}, bill_issue_tags(issue_tags(slug, display_en))`,
       { count: 'exact' },
     )
     .order('latest_action_at', { ascending: false, nullsFirst: false })
