@@ -2,6 +2,9 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { ThumbsUp, ThumbsDown, Flame } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { castBillSignal, type BillSignal } from '@/app/bills/actions';
 
 type Counts = {
@@ -10,25 +13,10 @@ type Counts = {
   priority_count: number | null;
 };
 
-const SIGNALS: { key: BillSignal; label: string; colorOn: string; colorOff: string }[] = [
-  {
-    key: 'support',
-    label: 'Support',
-    colorOn: 'bg-emerald-600 text-white border-emerald-600',
-    colorOff: 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50',
-  },
-  {
-    key: 'oppose',
-    label: 'Oppose',
-    colorOn: 'bg-rose-600 text-white border-rose-600',
-    colorOff: 'bg-white text-rose-700 border-rose-300 hover:bg-rose-50',
-  },
-  {
-    key: 'priority',
-    label: 'High priority',
-    colorOn: 'bg-amber-600 text-white border-amber-600',
-    colorOff: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50',
-  },
+const SIGNALS: { key: BillSignal; label: string; Icon: typeof ThumbsUp }[] = [
+  { key: 'support', label: 'Support', Icon: ThumbsUp },
+  { key: 'oppose', label: 'Oppose', Icon: ThumbsDown },
+  { key: 'priority', label: 'High priority', Icon: Flame },
 ];
 
 export default function BillSignalButtons({
@@ -47,37 +35,42 @@ export default function BillSignalButtons({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-3">
-        {SIGNALS.map((s) => {
-          const isOn = userSignals.includes(s.key);
+      <div className="flex flex-wrap gap-2">
+        {SIGNALS.map(({ key, label, Icon }) => {
+          const isOn = userSignals.includes(key);
           const count =
-            s.key === 'support'
+            key === 'support'
               ? counts.support_count
-              : s.key === 'oppose'
+              : key === 'oppose'
                 ? counts.oppose_count
                 : counts.priority_count;
           return (
-            <button
-              key={s.key}
+            <Button
+              key={key}
+              variant={isOn ? 'default' : 'outline'}
+              size="sm"
               disabled={isPending || !isSignedIn}
-              className={`rounded-md border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${isOn ? s.colorOn : s.colorOff}`}
               onClick={() => {
                 if (!isSignedIn) return;
                 startTransition(async () => {
-                  const res = await castBillSignal(billId, s.key);
+                  const res = await castBillSignal(billId, key);
                   if (!res.ok && res.error) alert(res.error);
                   router.refresh();
                 });
               }}
             >
-              {s.label} · {count ?? 0}
-            </button>
+              <Icon />
+              {label}
+              <span className="ml-1 font-mono text-xs tabular-nums opacity-70">
+                {count ?? 0}
+              </span>
+            </Button>
           );
         })}
       </div>
       {!isSignedIn ? (
-        <p className="text-xs text-neutral-600">
-          <a href="/auth" className="text-blue-600 hover:underline">
+        <p className="text-xs text-muted-foreground">
+          <a href="/auth" className="font-medium text-foreground underline-offset-4 hover:underline">
             Sign in
           </a>{' '}
           to record an advisory signal.

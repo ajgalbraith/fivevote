@@ -1,8 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { Landmark, Users, PlusCircle } from 'lucide-react';
+
 import './globals.css';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import SignOutButton from '@/components/SignOutButton';
+
+const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' });
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
   title: 'FiveVote — advisory civic engagement',
@@ -15,44 +24,58 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full bg-neutral-50 text-neutral-900">
-        <header className="border-b border-neutral-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-semibold tracking-tight">
+    <html
+      lang="en"
+      className={cn('h-full antialiased', geistSans.variable, geistMono.variable)}
+    >
+      <body className="min-h-full bg-background font-sans text-foreground">
+        <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-3">
+            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
+                5V
+              </span>
               FiveVote
             </Link>
-            <nav className="flex items-center gap-5 text-sm">
-              <Link href="/bills" className="hover:underline">Official bills</Link>
-              <Link href="/proposals" className="hover:underline">Community proposals</Link>
+            <nav className="flex items-center gap-2 text-sm">
+              <Link href="/bills" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                <Landmark />
+                Official bills
+              </Link>
+              <Link href="/proposals" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                <Users />
+                Proposals
+              </Link>
               {user ? (
                 <>
-                  <Link
-                    href="/proposals/new"
-                    className="rounded-md bg-neutral-900 px-3 py-1.5 text-white hover:bg-neutral-700"
-                  >
+                  <Link href="/proposals/new" className={buttonVariants({ size: 'sm' })}>
+                    <PlusCircle />
                     New proposal
                   </Link>
                   <SignOutButton />
                 </>
               ) : (
-                <Link
-                  href="/auth"
-                  className="rounded-md border border-neutral-300 px-3 py-1.5 hover:bg-neutral-100"
-                >
+                <Link href="/auth" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                   Sign in
                 </Link>
               )}
             </nav>
           </div>
-          <div className="border-t border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-900">
+          <div className="border-t border-amber-200/70 bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
             Advisory civic signaling only. FiveVote tallies do not enact law.
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-        <footer className="mx-auto max-w-6xl px-4 pb-10 text-xs text-neutral-500">
-          Official legislative data is pulled from government sources with provenance preserved.
-          Community proposals are clearly labeled and are not official legislation.
+
+        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+
+        <footer className="mx-auto mt-16 max-w-6xl px-4 pb-10 text-xs text-muted-foreground">
+          <Alert>
+            <AlertDescription>
+              Official legislative data is pulled directly from government sources with
+              provenance preserved. Community proposals are clearly labeled and are not
+              official legislation.
+            </AlertDescription>
+          </Alert>
         </footer>
       </body>
     </html>

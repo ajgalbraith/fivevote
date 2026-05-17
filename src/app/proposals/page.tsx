@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import { Users, MessageSquarePlus } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -16,59 +22,65 @@ export default async function ProposalsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-start justify-between">
-        <div>
-          <div className="mb-1 inline-block rounded bg-violet-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-            Community
-          </div>
-          <h1 className="text-2xl font-semibold">Citizen proposals</h1>
-          <p className="text-sm text-neutral-600">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <Badge variant="secondary" className="gap-1">
+            <Users className="size-3" /> Community
+          </Badge>
+          <h1 className="text-3xl font-semibold tracking-tight">Citizen proposals</h1>
+          <p className="text-sm text-muted-foreground">
             Ideas authored by FiveVote users. Not official legislation.
           </p>
         </div>
-        <Link
-          href="/proposals/new"
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-700"
-        >
+        <Link href="/proposals/new" className={buttonVariants({ size: 'sm' })}>
+          <MessageSquarePlus />
           New proposal
         </Link>
       </header>
 
       {error ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          {error.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Failed to load proposals</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       ) : !proposals || proposals.length === 0 ? (
-        <div className="rounded border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-          No published proposals yet.{' '}
-          <Link href="/proposals/new" className="text-blue-600 hover:underline">
-            Be the first to write one.
-          </Link>
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <MessageSquarePlus className="size-8 text-muted-foreground/60" />
+            <div className="text-sm text-muted-foreground">No published proposals yet.</div>
+            <Link href="/proposals/new" className={buttonVariants({ size: 'sm' })}>
+              Be the first
+            </Link>
+          </CardContent>
+        </Card>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-200 bg-white">
+        <div className="grid gap-3">
           {proposals.map((p) => {
             const jName = Array.isArray(p.jurisdictions)
               ? p.jurisdictions[0]?.name
               : (p.jurisdictions as { name?: string } | null)?.name;
             return (
-              <li key={p.id} className="p-4 hover:bg-neutral-50">
-                <Link href={`/proposals/${p.id}`} className="block space-y-1">
-                  <div className="text-xs text-neutral-500">
-                    {jName ?? 'unscoped'}
-                    {p.published_at ? ` · ${new Date(p.published_at).toLocaleDateString()}` : ''}
-                  </div>
-                  <div className="font-medium">{p.title}</div>
-                  {p.plain_language_summary ? (
-                    <div className="text-sm text-neutral-700">
-                      {p.plain_language_summary}
+              <Link key={p.id} href={`/proposals/${p.id}`} className="block">
+                <Card className="transition hover:border-foreground/20">
+                  <CardContent className="space-y-2 p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{jName ?? 'unscoped'}</span>
+                      {p.published_at ? (
+                        <span>· {new Date(p.published_at).toLocaleDateString()}</span>
+                      ) : null}
                     </div>
-                  ) : null}
-                </Link>
-              </li>
+                    <div className="font-medium leading-snug">{p.title}</div>
+                    {p.plain_language_summary ? (
+                      <div className="line-clamp-2 text-sm text-muted-foreground">
+                        {p.plain_language_summary}
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
   );

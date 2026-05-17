@@ -1,6 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { Mail, CheckCircle2 } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function AuthForm({ next }: { next: string }) {
@@ -10,7 +16,7 @@ export default function AuthForm({ next }: { next: string }) {
 
   return (
     <form
-      className="space-y-3"
+      className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
         setStatus('sending');
@@ -29,33 +35,38 @@ export default function AuthForm({ next }: { next: string }) {
         }
       }}
     >
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Email</span>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2"
           placeholder="you@example.com"
+          autoComplete="email"
         />
-      </label>
-      <button
-        type="submit"
-        disabled={status === 'sending'}
-        className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-700 disabled:opacity-50"
-      >
-        {status === 'sending' ? 'Sending...' : 'Send magic link'}
-      </button>
+      </div>
+
+      <Button type="submit" disabled={status === 'sending'} className="w-full">
+        <Mail />
+        {status === 'sending' ? 'Sending…' : 'Send magic link'}
+      </Button>
+
       {status === 'sent' ? (
-        <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          Check your inbox for a sign-in link.
-        </p>
+        <Alert>
+          <CheckCircle2 />
+          <AlertTitle>Check your inbox</AlertTitle>
+          <AlertDescription>
+            We sent a sign-in link to {email}.
+          </AlertDescription>
+        </Alert>
       ) : null}
       {status === 'error' ? (
-        <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t send link</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : null}
     </form>
   );

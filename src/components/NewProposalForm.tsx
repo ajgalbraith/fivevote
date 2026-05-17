@@ -1,6 +1,21 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Send } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { createProposal, type CreateProposalState } from '@/app/proposals/actions';
 
 type Jurisdiction = {
@@ -16,81 +31,87 @@ export default function NewProposalForm({ jurisdictions }: { jurisdictions: Juri
   const [state, formAction, isPending] = useActionState(createProposal, initial);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Title</span>
-        <input
+    <form action={formAction} className="space-y-6">
+      <input type="hidden" name="jurisdiction_id" id="jurisdiction_id_hidden" />
+
+      <div className="space-y-2">
+        <Label htmlFor="title">Title</Label>
+        <Input
+          id="title"
           name="title"
           required
           maxLength={200}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2"
           placeholder="A short, plain-language headline"
         />
-      </label>
+      </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Jurisdiction</span>
-        <select
+      <div className="space-y-2">
+        <Label htmlFor="jurisdiction-select">Jurisdiction</Label>
+        <Select
           name="jurisdiction_id"
           required
-          className="w-full rounded-md border border-neutral-300 px-3 py-2"
         >
-          <option value="">Pick a level of government...</option>
-          {jurisdictions.map((j) => (
-            <option key={j.id} value={j.id}>
-              {j.country_code} · {j.level} · {j.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger id="jurisdiction-select" className="w-full">
+            <SelectValue placeholder="Pick a level of government..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {jurisdictions.map((j) => (
+                <SelectItem key={j.id} value={j.id}>
+                  {j.country_code} · {j.level} · {j.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">One-sentence plain-language summary</span>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="summary">Plain-language summary</Label>
+        <Input
+          id="summary"
           name="summary"
           maxLength={400}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2"
-          placeholder="Optional but recommended"
+          placeholder="One sentence. Optional but recommended."
         />
-      </label>
+      </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Problem statement</span>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="problem">Problem statement</Label>
+        <Textarea
+          id="problem"
           name="problem"
           rows={3}
           maxLength={2000}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2"
           placeholder="What problem does this solve?"
         />
-      </label>
+      </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium">Proposal text</span>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="proposal_text">Proposal text</Label>
+        <Textarea
+          id="proposal_text"
           name="proposal_text"
           required
           rows={10}
           maxLength={10000}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 font-mono text-sm"
           placeholder="The actual proposal"
+          className="font-mono text-sm"
         />
-      </label>
+      </div>
 
       {state.error ? (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {state.error}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Couldn&apos;t publish</AlertTitle>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       ) : null}
 
       <div className="flex items-center justify-end gap-3">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm text-white hover:bg-neutral-700 disabled:opacity-50"
-        >
-          {isPending ? 'Publishing...' : 'Publish for review'}
-        </button>
+        <Button type="submit" disabled={isPending}>
+          <Send />
+          {isPending ? 'Publishing…' : 'Publish for review'}
+        </Button>
       </div>
     </form>
   );

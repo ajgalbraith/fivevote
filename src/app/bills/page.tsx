@@ -1,4 +1,9 @@
 import Link from 'next/link';
+import { Landmark, FileText } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -16,56 +21,67 @@ export default async function BillsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <div className="mb-1 inline-block rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-            Official
-          </div>
-          <h1 className="text-2xl font-semibold">Government bills</h1>
-          <p className="text-sm text-neutral-600">
-            Pulled from official sources. Provenance preserved per bill.
-          </p>
-        </div>
+      <header className="space-y-2">
+        <Badge variant="default" className="gap-1">
+          <Landmark className="size-3" /> Official
+        </Badge>
+        <h1 className="text-3xl font-semibold tracking-tight">Government bills</h1>
+        <p className="text-sm text-muted-foreground">
+          Pulled from official sources. Provenance preserved per bill.
+        </p>
       </header>
 
       {error ? (
-        <div className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          Failed to load bills: {error.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Failed to load bills</AlertTitle>
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       ) : !bills || bills.length === 0 ? (
-        <div className="rounded border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-          No bills ingested yet. Run the Congress.gov connector to populate.
-        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
+            <FileText className="size-8 text-muted-foreground/60" />
+            <div>No bills ingested yet.</div>
+            <div className="text-xs">
+              Run the Congress.gov connector to populate the database.
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-200 bg-white">
+        <div className="grid gap-3">
           {bills.map((b) => (
-            <li key={b.id} className="p-4 hover:bg-neutral-50">
-              <Link href={`/bills/${b.id}`} className="block">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-neutral-500">
-                      <span className="font-mono">{b.bill_number}</span>
-                      {b.chamber ? <span>· {b.chamber}</span> : null}
-                      <span>· {b.session_label}</span>
-                      {b.status_code ? <span>· {b.status_code}</span> : null}
-                    </div>
-                    <div className="font-medium">{b.title_en ?? '(untitled)'}</div>
-                    {b.latest_action_text ? (
-                      <div className="text-sm text-neutral-600">
-                        Latest: {b.latest_action_text}
-                      </div>
+            <Link key={b.id} href={`/bills/${b.id}`} className="block">
+              <Card className="transition hover:border-foreground/20">
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono font-medium text-foreground">
+                      {b.bill_number}
+                    </span>
+                    {b.chamber ? <span>· {b.chamber}</span> : null}
+                    <span>· {b.session_label}</span>
+                    {b.status_code ? (
+                      <Badge variant="outline" className="ml-auto">
+                        {b.status_code}
+                      </Badge>
                     ) : null}
                   </div>
-                  <div className="shrink-0 text-xs text-neutral-500">
-                    {b.latest_action_at
-                      ? new Date(b.latest_action_at).toLocaleDateString()
-                      : null}
+                  <div className="font-medium leading-snug">
+                    {b.title_en ?? '(untitled)'}
                   </div>
-                </div>
-              </Link>
-            </li>
+                  {b.latest_action_text ? (
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
+                      Latest: {b.latest_action_text}
+                    </div>
+                  ) : null}
+                  {b.latest_action_at ? (
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(b.latest_action_at).toLocaleDateString()}
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </Link>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

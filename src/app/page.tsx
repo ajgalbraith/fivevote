@@ -1,4 +1,17 @@
 import Link from 'next/link';
+import { Landmark, Users, ArrowRight } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -16,57 +29,81 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-3">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Track legislation. Surface community ideas.
+    <div className="space-y-12">
+      <section className="space-y-4">
+        <Badge variant="outline">Open civic data · advisory voting</Badge>
+        <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight">
+          Track legislation.<br />Surface community ideas.
         </h1>
-        <p className="max-w-2xl text-neutral-600">
+        <p className="max-w-2xl text-base text-muted-foreground">
           FiveVote tracks official bills from U.S. Congress and Canada&apos;s Parliament,
           and lets the public propose ideas of their own. Voting here is{' '}
-          <strong>advisory civic signaling</strong> &mdash; it does not enact law.
+          <span className="font-medium text-foreground">advisory civic signaling</span>
+          {' '}&mdash; it does not enact law.
         </p>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-2">
-        <Link
-          href="/bills"
-          className="group rounded-lg border border-blue-200 bg-blue-50 p-6 transition hover:border-blue-400"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-              Official
-            </span>
-            <h2 className="text-lg font-semibold">Government bills</h2>
-          </div>
-          <p className="text-sm text-neutral-700">
-            Bills pulled directly from Congress.gov with full source provenance.
-          </p>
-          <p className="mt-3 text-2xl font-semibold">{billCount ?? 0}</p>
-          <p className="text-xs text-neutral-500">tracked bills</p>
-        </Link>
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card className="group transition hover:border-foreground/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Landmark className="size-4 text-muted-foreground" />
+              <Badge variant="default">Official</Badge>
+            </div>
+            <CardTitle>Government bills</CardTitle>
+            <CardDescription>
+              Pulled directly from Congress.gov with full source provenance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="font-mono text-3xl font-semibold tabular-nums">
+              {billCount ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground">tracked bills</div>
+          </CardContent>
+          <CardFooter>
+            <Link
+              href="/bills"
+              className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'ml-auto' })}
+            >
+              Browse <ArrowRight />
+            </Link>
+          </CardFooter>
+        </Card>
 
-        <Link
-          href="/proposals"
-          className="group rounded-lg border border-violet-200 bg-violet-50 p-6 transition hover:border-violet-400"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded bg-violet-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-              Community
-            </span>
-            <h2 className="text-lg font-semibold">Citizen proposals</h2>
-          </div>
-          <p className="text-sm text-neutral-700">
-            Ideas authored by FiveVote users. Clearly labeled, separately governed.
-          </p>
-          <p className="mt-3 text-2xl font-semibold">{proposalCount ?? 0}</p>
-          <p className="text-xs text-neutral-500">published proposals</p>
-        </Link>
+        <Card className="group transition hover:border-foreground/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Users className="size-4 text-muted-foreground" />
+              <Badge variant="secondary">Community</Badge>
+            </div>
+            <CardTitle>Citizen proposals</CardTitle>
+            <CardDescription>
+              Ideas authored by FiveVote users. Clearly labeled. Separately governed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="font-mono text-3xl font-semibold tabular-nums">
+              {proposalCount ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground">published proposals</div>
+          </CardContent>
+          <CardFooter>
+            <Link
+              href="/proposals"
+              className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'ml-auto' })}
+            >
+              Browse <ArrowRight />
+            </Link>
+          </CardFooter>
+        </Card>
       </section>
 
-      <section className="rounded-md border border-neutral-200 bg-white p-6 text-sm text-neutral-700">
-        <h3 className="mb-2 text-base font-semibold">Why FiveVote separates these</h3>
-        <p>
+      <Separator />
+
+      <section className="max-w-2xl space-y-2">
+        <h2 className="text-base font-semibold">Why FiveVote separates these</h2>
+        <p className="text-sm text-muted-foreground">
           Lawmaking happens through legislatures and ballot processes &mdash; not through
           private apps. We never present a community tally as &ldquo;passing&rdquo; or
           &ldquo;defeating&rdquo; a law. Government bills are kept distinct from

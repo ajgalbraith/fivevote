@@ -1,6 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { LogOut } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function SignOutButton() {
@@ -8,15 +11,17 @@ export default function SignOutButton() {
   const supabase = getSupabaseBrowserClient();
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={async () => {
         await supabase.auth.signOut();
         router.refresh();
         router.push('/');
       }}
-      className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100"
     >
+      <LogOut />
       Sign out
-    </button>
+    </Button>
   );
 }

@@ -1,4 +1,8 @@
 import { redirect } from 'next/navigation';
+import { Users } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import NewProposalForm from '@/components/NewProposalForm';
 
@@ -17,18 +21,28 @@ export default async function NewProposalPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <header>
-        <div className="mb-1 inline-block rounded bg-violet-600 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
-          Community
-        </div>
-        <h1 className="text-2xl font-semibold">New proposal</h1>
-        <p className="text-sm text-neutral-600">
-          Your proposal will be labeled as a <strong>community idea</strong> and reviewed
-          before becoming widely visible. It is not legislation.
+      <header className="space-y-2">
+        <Badge variant="secondary" className="gap-1">
+          <Users className="size-3" /> Community
+        </Badge>
+        <h1 className="text-3xl font-semibold tracking-tight">New proposal</h1>
+        <p className="text-sm text-muted-foreground">
+          Your proposal will be labeled as a <span className="font-medium text-foreground">community idea</span>{' '}
+          and reviewed before becoming widely visible. It is not legislation.
         </p>
       </header>
 
-      <NewProposalForm jurisdictions={jurisdictions ?? []} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Write your proposal</CardTitle>
+          <CardDescription>
+            Be specific and plain-spoken. You can edit while it&apos;s in draft.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <NewProposalForm jurisdictions={jurisdictions ?? []} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

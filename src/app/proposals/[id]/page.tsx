@@ -1,5 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, Users, AlertTriangle } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import ProposalSignalButtons from '@/components/ProposalSignalButtons';
 
@@ -51,64 +58,75 @@ export default async function ProposalDetailPage({
 
   return (
     <div className="space-y-8">
-      <nav className="text-sm">
-        <Link href="/proposals" className="text-violet-600 hover:underline">
-          ← All proposals
-        </Link>
-      </nav>
+      <Link
+        href="/proposals"
+        className={buttonVariants({ variant: 'ghost', size: 'sm', className: '-ml-2' })}
+      >
+        <ArrowLeft />
+        All proposals
+      </Link>
 
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded bg-violet-600 px-2 py-0.5 font-semibold uppercase tracking-wide text-white">
-            Community
-          </span>
-          {jName ? <span className="text-neutral-600">{jName}</span> : null}
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant="secondary" className="gap-1">
+            <Users className="size-3" /> Community
+          </Badge>
+          {jName ? <span className="text-muted-foreground">{jName}</span> : null}
           {isPending ? (
-            <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">
+            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
               pending moderator review
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <h1 className="text-2xl font-semibold leading-tight">{proposal.title}</h1>
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight">
+          {proposal.title}
+        </h1>
       </header>
 
-      <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <strong>Community proposal &mdash; not legislation.</strong> This is an idea
-        authored by a FiveVote user. Lawmaking happens through Congress and Parliament,
-        not through FiveVote.
-      </section>
+      <Alert>
+        <AlertTriangle />
+        <AlertTitle>Community proposal — not legislation</AlertTitle>
+        <AlertDescription>
+          This is an idea authored by a FiveVote user. Lawmaking happens through
+          Congress and Parliament, not through FiveVote.
+        </AlertDescription>
+      </Alert>
 
       {proposal.plain_language_summary ? (
-        <section>
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            Summary
-          </h2>
-          <p className="text-base">{proposal.plain_language_summary}</p>
-        </section>
+        <Card>
+          <CardContent className="space-y-1 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Summary
+            </div>
+            <p className="text-base">{proposal.plain_language_summary}</p>
+          </CardContent>
+        </Card>
       ) : null}
 
       {proposal.problem_statement ? (
-        <section>
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Problem
           </h2>
-          <p className="whitespace-pre-line text-sm text-neutral-800">
+          <p className="whitespace-pre-line text-sm text-foreground/90">
             {proposal.problem_statement}
           </p>
         </section>
       ) : null}
 
-      <section>
-        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+      <section className="space-y-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Proposal
         </h2>
-        <p className="whitespace-pre-line text-sm text-neutral-800">
+        <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
           {proposal.proposal_text}
         </p>
       </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Community signal</h2>
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold">Community signal</h2>
         <ProposalSignalButtons
           proposalId={proposal.id}
           isSignedIn={!!user}

@@ -1,5 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, ExternalLink, Landmark, AlertTriangle } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import BillSignalButtons from '@/components/BillSignalButtons';
 
@@ -54,49 +61,56 @@ export default async function BillDetailPage({
 
   return (
     <div className="space-y-8">
-      <nav className="text-sm">
-        <Link href="/bills" className="text-blue-600 hover:underline">
-          ← All bills
-        </Link>
-      </nav>
+      <Link
+        href="/bills"
+        className={buttonVariants({ variant: 'ghost', size: 'sm', className: '-ml-2' })}
+      >
+        <ArrowLeft />
+        All bills
+      </Link>
 
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded bg-blue-600 px-2 py-0.5 font-semibold uppercase tracking-wide text-white">
-            Official
-          </span>
-          <span className="font-mono text-neutral-600">{bill.bill_number}</span>
-          {bill.chamber ? <span className="text-neutral-500">· {bill.chamber}</span> : null}
-          <span className="text-neutral-500">· {bill.session_label}</span>
-          {jurisdictionName ? <span className="text-neutral-500">· {jurisdictionName}</span> : null}
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="default" className="gap-1">
+            <Landmark className="size-3" /> Official
+          </Badge>
+          <span className="font-mono font-medium text-foreground">{bill.bill_number}</span>
+          {bill.chamber ? <span>· {bill.chamber}</span> : null}
+          <span>· {bill.session_label}</span>
+          {jurisdictionName ? <span>· {jurisdictionName}</span> : null}
+          {bill.status_code ? (
+            <Badge variant="outline" className="ml-auto">
+              {bill.status_code}
+            </Badge>
+          ) : null}
         </div>
-        <h1 className="text-2xl font-semibold leading-tight">
+        <h1 className="text-3xl font-semibold leading-tight tracking-tight">
           {bill.title_en ?? '(untitled)'}
         </h1>
-        {bill.status_code ? (
-          <p className="text-sm text-neutral-600">Status: {bill.status_code}</p>
-        ) : null}
         {bill.source_url ? (
-          <p className="text-sm">
-            <a
-              href={bill.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              View source on {bill.source_system} ↗
-            </a>
-          </p>
+          <a
+            href={bill.source_url}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            View source on {bill.source_system}
+            <ExternalLink />
+          </a>
         ) : null}
       </header>
 
-      <section className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <strong>Advisory signal only.</strong> Your input is community feedback, not a
-        legislative vote. Lawmaking happens through Congress, not through FiveVote.
-      </section>
+      <Alert>
+        <AlertTriangle />
+        <AlertTitle>Advisory signal only</AlertTitle>
+        <AlertDescription>
+          Your input is community feedback, not a legislative vote. Lawmaking happens
+          through Congress, not through FiveVote.
+        </AlertDescription>
+      </Alert>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Community signal</h2>
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold">Community signal</h2>
         <BillSignalButtons
           billId={bill.id}
           isSignedIn={!!user}
@@ -106,28 +120,41 @@ export default async function BillDetailPage({
       </section>
 
       {bill.summary_en ? (
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Summary</h2>
-          <p className="whitespace-pre-line text-sm text-neutral-800">{bill.summary_en}</p>
-        </section>
+        <>
+          <Separator />
+          <section className="space-y-2">
+            <h2 className="text-base font-semibold">Summary</h2>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+              {bill.summary_en}
+            </p>
+          </section>
+        </>
       ) : null}
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Recent actions</h2>
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold">Recent actions</h2>
         {actions && actions.length > 0 ? (
-          <ul className="divide-y divide-neutral-200 rounded-md border border-neutral-200 bg-white text-sm">
-            {actions.map((a) => (
-              <li key={a.id} className="p-3">
-                <div className="text-xs text-neutral-500">
-                  {new Date(a.occurred_at).toLocaleString()}
-                  {a.chamber ? ` · ${a.chamber}` : ''}
+          <Card>
+            <CardContent className="divide-y divide-border p-0">
+              {actions.map((a) => (
+                <div key={a.id} className="space-y-1 p-4 text-sm">
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(a.occurred_at).toLocaleString()}
+                    {a.chamber ? ` · ${a.chamber}` : ''}
+                  </div>
+                  <div>{a.action_text}</div>
                 </div>
-                <div>{a.action_text}</div>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </CardContent>
+          </Card>
         ) : (
-          <p className="text-sm text-neutral-600">No actions recorded yet.</p>
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No actions recorded yet.
+            </CardContent>
+          </Card>
         )}
       </section>
     </div>
