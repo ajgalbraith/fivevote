@@ -134,6 +134,11 @@ export default async function BillsPage({
                         <div className="font-medium leading-snug">
                           {b.title_en ?? '(untitled)'}
                         </div>
+                        {b.plain_english_summary ? (
+                          <div className="line-clamp-2 text-sm text-foreground/90">
+                            {b.plain_english_summary}
+                          </div>
+                        ) : null}
                         {sponsor ? (
                           <div className="text-xs text-muted-foreground">
                             Sponsored by{' '}
@@ -142,7 +147,7 @@ export default async function BillsPage({
                             </span>
                           </div>
                         ) : null}
-                        {b.latest_action_text ? (
+                        {!b.plain_english_summary && b.latest_action_text ? (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
                             Latest: {b.latest_action_text}
                           </div>

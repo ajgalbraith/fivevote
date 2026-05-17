@@ -61,6 +61,7 @@ export type BillListRow = {
   chamber: string | null;
   session_label: string;
   title_en: string | null;
+  plain_english_summary: string | null;
   status_code: string | null;
   latest_action_at: string | null;
   latest_action_text: string | null;
@@ -102,7 +103,7 @@ export async function queryBills(
   let q = supabase
     .from('bills')
     .select(
-      `id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text, ${jurisdictionRel}, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))`,
+      `id, bill_number, chamber, session_label, title_en, plain_english_summary, status_code, latest_action_at, latest_action_text, ${jurisdictionRel}, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))`,
       { count: 'exact' },
     )
     .order('latest_action_at', { ascending: false, nullsFirst: false })

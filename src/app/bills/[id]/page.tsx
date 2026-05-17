@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import BillSignalButtons from '@/components/BillSignalButtons';
+import FollowButton from '@/components/FollowButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,7 @@ export default async function BillDetailPage({
   const { data: bill } = await supabase
     .from('bills')
     .select(
-      'id, bill_number, chamber, session_label, title_en, summary_en, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
+      'id, bill_number, chamber, session_label, title_en, summary_en, plain_english_summary, summary_model, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -71,6 +72,16 @@ export default async function BillDetailPage({
           .eq('user_id', user.id)
       ).data?.map((r) => r.signal as 'support' | 'oppose' | 'priority') ?? []
     : [];
+
+  const isFollowing = user
+    ? !!(await supabase
+        .from('notification_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('target_kind', 'bill')
+        .eq('target_id', id)
+        .maybeSingle()).data
+    : false;
 
   const jurisdiction = Array.isArray(bill.jurisdictions)
     ? bill.jurisdictions[0]
@@ -141,19 +152,40 @@ export default async function BillDetailPage({
               {t.display_en}
             </Link>
           ))}
-          {bill.source_url ? (
-            <a
-              href={bill.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({ variant: 'outline', size: 'sm', className: 'ml-auto' })}
-            >
-              View source on {bill.source_system}
-              <ExternalLink />
-            </a>
-          ) : null}
+          <div className="ml-auto flex items-center gap-2">
+            <FollowButton
+              targetKind="bill"
+              targetId={bill.id}
+              isSignedIn={!!user}
+              initialFollowing={isFollowing}
+              revalidate={`/bills/${bill.id}`}
+            />
+            {bill.source_url ? (
+              <a
+                href={bill.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                View source on {bill.source_system}
+                <ExternalLink />
+              </a>
+            ) : null}
+          </div>
         </div>
       </header>
+
+      {bill.plain_english_summary ? (
+        <section className="rounded-lg border border-border bg-card p-4">
+          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono uppercase tracking-wide">
+              AI summary
+            </span>
+            {bill.summary_model ? <span>· {bill.summary_model}</span> : null}
+          </div>
+          <p className="text-base leading-relaxed">{bill.plain_english_summary}</p>
+        </section>
+      ) : null}
 
       <Alert>
         <AlertTriangle />
@@ -178,7 +210,7 @@ export default async function BillDetailPage({
         <>
           <Separator />
           <section className="space-y-2">
-            <h2 className="text-base font-semibold">Plain-language summary</h2>
+            <h2 className="text-base font-semibold">Official summary</h2>
             <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
               {bill.summary_en}
             </p>

@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import ProposalSignalButtons from '@/components/ProposalSignalButtons';
+import FollowButton from '@/components/FollowButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,16 @@ export default async function ProposalDetailPage({
       ).data?.signal as 'support' | 'not_now' | 'needs_revision' | undefined
     : undefined;
 
+  const isFollowing = user
+    ? !!(await supabase
+        .from('notification_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('target_kind', 'proposal')
+        .eq('target_id', id)
+        .maybeSingle()).data
+    : false;
+
   const jName = Array.isArray(proposal.jurisdictions)
     ? proposal.jurisdictions[0]?.name
     : (proposal.jurisdictions as { name?: string } | null)?.name;
@@ -77,6 +88,15 @@ export default async function ProposalDetailPage({
               pending moderator review
             </Badge>
           ) : null}
+          <div className="ml-auto">
+            <FollowButton
+              targetKind="proposal"
+              targetId={proposal.id}
+              isSignedIn={!!user}
+              initialFollowing={isFollowing}
+              revalidate={`/proposals/${proposal.id}`}
+            />
+          </div>
         </div>
         <h1 className="text-3xl font-semibold leading-tight tracking-tight">
           {proposal.title}
