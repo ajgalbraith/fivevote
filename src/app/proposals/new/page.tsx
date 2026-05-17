@@ -16,7 +16,7 @@ export default async function NewProposalPage() {
   const { data: jurisdictions } = await supabase
     .from('jurisdictions')
     .select('id, name, country_code, level')
-    .order('country_code')
+    .eq('country_code', 'US')
     .order('level');
 
   return (

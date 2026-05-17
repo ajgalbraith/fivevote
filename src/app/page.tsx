@@ -60,8 +60,7 @@ export default async function Home() {
           Vote where you stand on every bill.
         </h1>
         <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-          Track official legislation from the United States and Canada. Surface community
-          proposals. FiveVote is{' '}
+          Track official U.S. federal legislation. Surface community proposals. FiveVote is{' '}
           <span className="font-medium text-foreground">advisory civic signaling</span>
           {' '}— it does not replace elections, referendums, or legislative votes.
         </p>
@@ -114,7 +113,7 @@ export default async function Home() {
           icon={<ScrollText className="size-4 text-muted-foreground" />}
           badge={<Badge variant="outline">Coming next</Badge>}
           title="Existing laws"
-          description="Consolidated statutes from Justice Laws Canada and the U.S. Code."
+          description="Consolidated statutes from the U.S. Code."
           metric="—"
           metricLabel="not yet ingested"
           href="/bills"

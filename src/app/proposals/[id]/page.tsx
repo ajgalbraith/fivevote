@@ -88,7 +88,7 @@ export default async function ProposalDetailPage({
         <AlertTitle>Community proposal — not legislation</AlertTitle>
         <AlertDescription>
           This is an idea authored by a FiveVote user. Lawmaking happens through
-          Congress and Parliament, not through FiveVote.
+          Congress, not through FiveVote.
         </AlertDescription>
       </Alert>
 

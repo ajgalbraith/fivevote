@@ -32,14 +32,10 @@ export type BillFiltersProps = {
   };
 };
 
-const COUNTRIES = [
-  { value: 'US', label: 'United States' },
-  { value: 'CA', label: 'Canada' },
-];
+const COUNTRIES = [{ value: 'US', label: 'United States' }];
 const LEVELS = [
   { value: 'federal', label: 'Federal' },
   { value: 'state', label: 'State' },
-  { value: 'province', label: 'Province' },
   { value: 'municipal', label: 'Municipal' },
 ];
 const SINCE_OPTIONS = [
