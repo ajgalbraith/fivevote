@@ -19,10 +19,10 @@ import BillSignalButtons from '@/components/BillSignalButtons';
 
 export const dynamic = 'force-dynamic';
 
-// Date stored as UTC midnight ("2026-05-15T00:00:00.000Z") means "no time recorded" →
-// render as date only. Anything with a real time renders the full datetime.
+// UTC midnight means "no time recorded" → render as date only. Supabase serializes
+// timestamptz as either "...T00:00:00+00:00" or "...T00:00:00.000Z".
 function formatWhen(iso: string): string {
-  const isDateOnly = /T00:00:00(\.000)?Z$/.test(iso);
+  const isDateOnly = /T00:00:00(\.000)?(Z|\+00:?00)$/.test(iso);
   const d = new Date(iso);
   return isDateOnly ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : d.toLocaleString();
 }
