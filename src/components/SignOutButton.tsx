@@ -1,13 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function SignOutButton() {
-  const router = useRouter();
   const supabase = getSupabaseBrowserClient();
 
   return (
@@ -16,8 +14,8 @@ export default function SignOutButton() {
       size="sm"
       onClick={async () => {
         await supabase.auth.signOut();
-        router.refresh();
-        router.push('/');
+        // Hard reload to discard all SSR caches and rebuild the layout as unauthenticated.
+        window.location.assign('/');
       }}
     >
       <LogOut />

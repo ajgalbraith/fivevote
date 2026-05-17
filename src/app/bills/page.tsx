@@ -9,6 +9,7 @@ import BillFilters from '@/components/BillFilters';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import {
   bilTagSlugs,
+  billSponsor,
   listAvailableStatuses,
   listIssueTagsWithCounts,
   parseFilters,
@@ -105,6 +106,7 @@ export default async function BillsPage({
               {bills.map((b) => {
                 const j = b.jurisdictions;
                 const tags = bilTagSlugs(b);
+                const sponsor = billSponsor(b);
                 return (
                   <Link key={b.id} href={`/bills/${b.id}`} className="block">
                     <Card className="transition hover:border-foreground/20">
@@ -132,6 +134,19 @@ export default async function BillsPage({
                         <div className="font-medium leading-snug">
                           {b.title_en ?? '(untitled)'}
                         </div>
+                        {sponsor ? (
+                          <div className="text-xs text-muted-foreground">
+                            Sponsored by{' '}
+                            <span className="font-medium text-foreground">
+                              {sponsor.name}
+                            </span>
+                            {sponsor.party || sponsor.state_or_province ? (
+                              <span>
+                                {' '}({[sponsor.party, sponsor.state_or_province].filter(Boolean).join('-')})
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                         {b.latest_action_text ? (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
                             Latest: {b.latest_action_text}

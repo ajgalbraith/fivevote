@@ -189,6 +189,52 @@ async function ingestBill(listEntry) {
     }
   }
 
+  // Sponsors from Congress.gov.
+  const sponsors = detail.bill?.sponsors ?? [];
+  if (sponsors.length) {
+    const personRows = sponsors
+      .filter((s) => s.bioguideId)
+      .map((s) => ({
+        jurisdiction_id: US_FEDERAL_JURISDICTION_ID,
+        bioguide_id: s.bioguideId,
+        name: s.fullName ?? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim(),
+        party: s.party ?? null,
+        state_or_province: s.state ?? null,
+        district: s.district != null ? String(s.district) : null,
+        source_url: s.bioguideId
+          ? `https://bioguide.congress.gov/search/bio/${s.bioguideId}`
+          : null,
+      }));
+    if (personRows.length) {
+      const { data: persons, error: pErr } = await sb
+        .from('persons')
+        .upsert(personRows, { onConflict: 'jurisdiction_id,bioguide_id' })
+        .select('id, bioguide_id');
+      if (pErr) {
+        console.warn(`  ! persons upsert failed for ${fields.bill_number}: ${pErr.message}`);
+      } else {
+        const byBg = Object.fromEntries(persons.map((p) => [p.bioguide_id, p.id]));
+        const sponsorRows = sponsors
+          .filter((s) => byBg[s.bioguideId])
+          .map((s) => ({
+            bill_id: bill.id,
+            person_id: byBg[s.bioguideId],
+            role: 'sponsor',
+            added_at: detail.bill?.introducedDate
+              ? new Date(detail.bill.introducedDate).toISOString()
+              : null,
+          }));
+        await sb.from('sponsorships').delete().eq('bill_id', bill.id).eq('role', 'sponsor');
+        if (sponsorRows.length) {
+          const { error: spErr } = await sb.from('sponsorships').insert(sponsorRows);
+          if (spErr) {
+            console.warn(`  ! sponsorships failed for ${fields.bill_number}: ${spErr.message}`);
+          }
+        }
+      }
+    }
+  }
+
   return fields.bill_number;
 }
 

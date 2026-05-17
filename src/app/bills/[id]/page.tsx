@@ -6,6 +6,7 @@ import {
   Landmark,
   AlertTriangle,
   Circle,
+  User,
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,6 +19,16 @@ import BillSignalButtons from '@/components/BillSignalButtons';
 
 export const dynamic = 'force-dynamic';
 
+// "2026-05-15T00:00:00+00:00" → date only; otherwise full datetime.
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  const isMidnight =
+    d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+  return isMidnight ? d.toLocaleDateString() : d.toLocaleString();
+}
+
+type PersonRow = { id: string; name: string; party: string | null; state_or_province: string | null };
+
 export default async function BillDetailPage({
   params,
 }: {
@@ -29,7 +40,7 @@ export default async function BillDetailPage({
   const { data: bill } = await supabase
     .from('bills')
     .select(
-      'id, bill_number, chamber, session_label, title_en, summary_en, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en))',
+      'id, bill_number, chamber, session_label, title_en, summary_en, status_code, introduced_at, latest_action_at, latest_action_text, source_url, source_system, jurisdictions(name, country_code, level), bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -69,6 +80,13 @@ export default async function BillDetailPage({
     ?.map((t) => (Array.isArray(t.issue_tags) ? t.issue_tags[0] : t.issue_tags))
     .filter((t): t is { slug: string; display_en: string } => !!t) ?? [];
 
+  const sponsorshipRows = (bill.sponsorships as { role: string; persons: PersonRow | PersonRow[] | null }[] | null) ?? [];
+  const sponsors = sponsorshipRows
+    .filter((s) => s.role === 'sponsor')
+    .map((s) => (Array.isArray(s.persons) ? s.persons[0] : s.persons))
+    .filter((p): p is PersonRow => !!p);
+  const primarySponsor = sponsors[0] ?? null;
+
   return (
     <div className="space-y-8">
       <Link
@@ -101,6 +119,23 @@ export default async function BillDetailPage({
         <h1 className="text-3xl font-semibold leading-tight tracking-tight">
           {bill.title_en ?? '(untitled)'}
         </h1>
+        {primarySponsor ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="size-4" />
+            <span>Sponsored by</span>
+            <Link
+              href={`/people/${primarySponsor.id}`}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              {primarySponsor.name}
+            </Link>
+            {primarySponsor.party || primarySponsor.state_or_province ? (
+              <span>
+                ({[primarySponsor.party, primarySponsor.state_or_province].filter(Boolean).join('-')})
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           {tags.map((t) => (
             <Link
@@ -190,7 +225,7 @@ export default async function BillDetailPage({
                     </div>
                     <div className="space-y-0.5 pb-1 text-sm">
                       <div className="text-xs text-muted-foreground">
-                        {new Date(a.occurred_at).toLocaleString()}
+                        {formatWhen(a.occurred_at)}
                         {a.chamber ? ` · ${a.chamber}` : ''}
                       </div>
                       <div className="leading-snug">{a.action_text}</div>

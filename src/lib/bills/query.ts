@@ -66,7 +66,17 @@ export type BillListRow = {
   latest_action_text: string | null;
   jurisdictions: { name: string; country_code: string; level: string } | null;
   bill_issue_tags: { issue_tags: { slug: string; display_en: string } | { slug: string; display_en: string }[] | null }[];
+  sponsorships: {
+    role: string;
+    persons: { id: string; name: string; party: string | null; state_or_province: string | null } | { id: string; name: string; party: string | null; state_or_province: string | null }[] | null;
+  }[];
 };
+
+export function billSponsor(row: BillListRow): { id: string; name: string; party: string | null; state_or_province: string | null } | null {
+  const s = row.sponsorships?.find((sp) => sp.role === 'sponsor');
+  if (!s || !s.persons) return null;
+  return Array.isArray(s.persons) ? s.persons[0] ?? null : s.persons;
+}
 
 function unwrapTag(t: BillListRow['bill_issue_tags'][number]): { slug: string; display_en: string } | null {
   const tg = t.issue_tags;
@@ -92,7 +102,7 @@ export async function queryBills(
   let q = supabase
     .from('bills')
     .select(
-      `id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text, ${jurisdictionRel}, bill_issue_tags(issue_tags(slug, display_en))`,
+      `id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text, ${jurisdictionRel}, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))`,
       { count: 'exact' },
     )
     .order('latest_action_at', { ascending: false, nullsFirst: false })
