@@ -19,12 +19,12 @@ import BillSignalButtons from '@/components/BillSignalButtons';
 
 export const dynamic = 'force-dynamic';
 
-// "2026-05-15T00:00:00+00:00" → date only; otherwise full datetime.
+// Date stored as UTC midnight ("2026-05-15T00:00:00.000Z") means "no time recorded" →
+// render as date only. Anything with a real time renders the full datetime.
 function formatWhen(iso: string): string {
+  const isDateOnly = /T00:00:00(\.000)?Z$/.test(iso);
   const d = new Date(iso);
-  const isMidnight =
-    d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
-  return isMidnight ? d.toLocaleDateString() : d.toLocaleString();
+  return isDateOnly ? d.toLocaleDateString(undefined, { timeZone: 'UTC' }) : d.toLocaleString();
 }
 
 type PersonRow = { id: string; name: string; party: string | null; state_or_province: string | null };
@@ -129,11 +129,6 @@ export default async function BillDetailPage({
             >
               {primarySponsor.name}
             </Link>
-            {primarySponsor.party || primarySponsor.state_or_province ? (
-              <span>
-                ({[primarySponsor.party, primarySponsor.state_or_province].filter(Boolean).join('-')})
-              </span>
-            ) : null}
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">

@@ -158,7 +158,12 @@ async function ingestBill(listEntry) {
         .filter((a) => a.actionDate)
         .map((a) => ({
           bill_id: bill.id,
-          occurred_at: new Date(`${a.actionDate}T${a.actionTime ?? '00:00:00'}`).toISOString(),
+          // Always interpret as UTC so the date-only check on the client works.
+          occurred_at: new Date(
+            a.actionTime
+              ? `${a.actionDate}T${a.actionTime}Z`
+              : `${a.actionDate}T00:00:00Z`,
+          ).toISOString(),
           chamber: a.chamber ?? null,
           action_code: a.actionCode ?? null,
           action_text: a.text ?? '',

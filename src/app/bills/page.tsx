@@ -140,11 +140,6 @@ export default async function BillsPage({
                             <span className="font-medium text-foreground">
                               {sponsor.name}
                             </span>
-                            {sponsor.party || sponsor.state_or_province ? (
-                              <span>
-                                {' '}({[sponsor.party, sponsor.state_or_province].filter(Boolean).join('-')})
-                              </span>
-                            ) : null}
                           </div>
                         ) : null}
                         {b.latest_action_text ? (
