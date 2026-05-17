@@ -127,14 +127,16 @@ export async function queryBills(
   })) as unknown as BillListRow[];
 
   // Filter by issue tags client-side because we joined a nested table.
+  let effectiveCount = count ?? rows.length;
   if (filters.issues && filters.issues.length) {
     const set = new Set(filters.issues);
     rows = rows.filter((b) =>
       bilTagSlugs(b).some((t) => set.has(t.slug)),
     );
+    effectiveCount = rows.length;
   }
 
-  return { data: rows, count: count ?? rows.length };
+  return { data: rows, count: effectiveCount };
 }
 
 export async function listIssueTagsWithCounts(supabase: SupabaseClient) {
