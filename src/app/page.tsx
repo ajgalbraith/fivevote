@@ -14,7 +14,9 @@ import {
 import { Separator } from '@/components/ui/separator';
 import BillSearchBar from '@/components/BillSearchBar';
 import VoteFeed from '@/components/VoteFeed';
+import VoteFeedList from '@/components/VoteFeedList';
 import FeedSortPills from '@/components/FeedSortPills';
+import FeedViewToggle, { parseView } from '@/components/FeedViewToggle';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { loadFeed, parseSort } from '@/lib/feed';
 
@@ -38,7 +40,9 @@ export default async function Home({
 }) {
   const sp = await searchParams;
   const sortRaw = Array.isArray(sp.sort) ? sp.sort[0] : sp.sort;
+  const viewRaw = Array.isArray(sp.view) ? sp.view[0] : sp.view;
   const sort = parseSort(sortRaw);
+  const view = parseView(viewRaw);
 
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -84,10 +88,17 @@ export default async function Home({
               Sorted by {sort === 'recent' ? 'recent activity' : sort === 'newest' ? 'date introduced' : sort === 'supported' ? 'most supported by FiveVote users' : 'most opposed by FiveVote users'}.
             </p>
           </div>
-          <FeedSortPills current={sort} />
+          <div className="flex flex-wrap items-center gap-2">
+            <FeedSortPills current={sort} />
+            <FeedViewToggle current={view} />
+          </div>
         </div>
-        <div className="mx-auto max-w-2xl">
-          <VoteFeed bills={feed} isSignedIn={!!user} />
+        <div className={view === 'deck' ? 'mx-auto max-w-2xl' : 'mx-auto max-w-3xl'}>
+          {view === 'deck' ? (
+            <VoteFeed bills={feed} isSignedIn={!!user} />
+          ) : (
+            <VoteFeedList bills={feed} isSignedIn={!!user} />
+          )}
         </div>
       </section>
 

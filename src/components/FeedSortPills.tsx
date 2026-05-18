@@ -10,10 +10,13 @@ export default function FeedSortPills({ current }: { current: FeedSort }) {
   const params = useSearchParams();
   const q = params.get('q');
 
+  const view = params.get('view');
+
   const buildHref = (sort: FeedSort) => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (sort !== 'recent') p.set('sort', sort);
+    if (view) p.set('view', view);
     const s = p.toString();
     return s ? `/?${s}` : '/';
   };
