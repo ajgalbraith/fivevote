@@ -173,15 +173,18 @@ export default function VoteFeed({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Cast a signal · reload for new bills</span>
-        <div className="flex h-1.5 flex-1 mx-4 overflow-hidden rounded-full bg-muted">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="hidden sm:inline">Reload for new bills</span>
+        <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div
             className="bg-foreground transition-[width] duration-200"
             style={{ width: `${((index + (state.revealed ? 1 : 0)) / bills.length) * 100}%` }}
           />
         </div>
-        <Link href={`/bills/${bill.id}`} className="hover:text-foreground hover:underline">
+        <Link
+          href={`/bills/${bill.id}`}
+          className="shrink-0 hover:text-foreground hover:underline"
+        >
           Open
         </Link>
       </div>
