@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ThumbsUp, ThumbsDown, Flame } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Flame, Minus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { castBillSignal, type BillSignal } from '@/app/bills/actions';
@@ -11,10 +11,12 @@ type Counts = {
   support_count: number | null;
   oppose_count: number | null;
   priority_count: number | null;
+  neutral_count: number | null;
 };
 
 const SIGNALS: { key: BillSignal; label: string; Icon: typeof ThumbsUp }[] = [
   { key: 'support', label: 'Support', Icon: ThumbsUp },
+  { key: 'neutral', label: 'Neutral', Icon: Minus },
   { key: 'oppose', label: 'Oppose', Icon: ThumbsDown },
   { key: 'priority', label: 'High priority', Icon: Flame },
 ];
@@ -43,7 +45,9 @@ export default function BillSignalButtons({
               ? counts.support_count
               : key === 'oppose'
                 ? counts.oppose_count
-                : counts.priority_count;
+                : key === 'priority'
+                  ? counts.priority_count
+                  : counts.neutral_count;
           return (
             <Button
               key={key}

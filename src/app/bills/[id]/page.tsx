@@ -57,7 +57,7 @@ export default async function BillDetailPage({
       .limit(50),
     supabase
       .from('bill_signal_counts')
-      .select('support_count, oppose_count, priority_count')
+      .select('support_count, oppose_count, priority_count, neutral_count')
       .eq('bill_id', id)
       .maybeSingle(),
     supabase.auth.getUser(),
@@ -70,7 +70,7 @@ export default async function BillDetailPage({
           .select('signal')
           .eq('bill_id', id)
           .eq('user_id', user.id)
-      ).data?.map((r) => r.signal as 'support' | 'oppose' | 'priority') ?? []
+      ).data?.map((r) => r.signal as 'support' | 'oppose' | 'priority' | 'neutral') ?? []
     : [];
 
   const isFollowing = user
@@ -201,7 +201,7 @@ export default async function BillDetailPage({
         <BillSignalButtons
           billId={bill.id}
           isSignedIn={!!user}
-          counts={counts ?? { support_count: 0, oppose_count: 0, priority_count: 0 }}
+          counts={counts ?? { support_count: 0, oppose_count: 0, priority_count: 0, neutral_count: 0 }}
           userSignals={userSignals}
         />
       </section>

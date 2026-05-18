@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ThumbsUp, ThumbsDown, Flame, Landmark, ExternalLink } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Flame, Minus, Landmark, ExternalLink } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,13 @@ const SIGNALS: {
     onColor: 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700',
   },
   {
+    key: 'neutral',
+    label: 'Neutral',
+    Icon: Minus,
+    barColor: 'bg-neutral-400',
+    onColor: 'bg-neutral-700 text-white border-neutral-700 hover:bg-neutral-800',
+  },
+  {
     key: 'oppose',
     label: 'Oppose',
     Icon: ThumbsDown,
@@ -51,7 +58,7 @@ type RowState = {
 };
 
 function totalVotes(c: SignalCounts) {
-  return c.support + c.oppose + c.priority;
+  return c.support + c.oppose + c.priority + c.neutral;
 }
 
 export default function VoteFeedList({

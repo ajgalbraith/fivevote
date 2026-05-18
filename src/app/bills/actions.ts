@@ -3,12 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 
-export type BillSignal = 'support' | 'oppose' | 'priority';
+export type BillSignal = 'support' | 'oppose' | 'priority' | 'neutral';
 
 export type SignalCounts = {
   support: number;
   oppose: number;
   priority: number;
+  neutral: number;
 };
 
 export type CastBillSignalResult =
@@ -48,7 +49,7 @@ export async function castBillSignal(
   const [{ data: countsRow }, { data: mine }] = await Promise.all([
     supabase
       .from('bill_signal_counts')
-      .select('support_count, oppose_count, priority_count')
+      .select('support_count, oppose_count, priority_count, neutral_count')
       .eq('bill_id', billId)
       .maybeSingle(),
     supabase
@@ -62,6 +63,7 @@ export async function castBillSignal(
     support: countsRow?.support_count ?? 0,
     oppose: countsRow?.oppose_count ?? 0,
     priority: countsRow?.priority_count ?? 0,
+    neutral: countsRow?.neutral_count ?? 0,
   };
   const userSignals = (mine ?? []).map((r) => r.signal as BillSignal);
 

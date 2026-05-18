@@ -17,8 +17,10 @@ import VoteFeed from '@/components/VoteFeed';
 import VoteFeedList from '@/components/VoteFeedList';
 import FeedSortPills from '@/components/FeedSortPills';
 import FeedViewToggle from '@/components/FeedViewToggle';
+import FeedTabs from '@/components/FeedTabs';
+import HotIssuesList from '@/components/HotIssuesList';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { loadFeed, parseSort, parseView } from '@/lib/feed';
+import { loadFeed, loadTrending, parseSort, parseTab, parseView } from '@/lib/feed';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,20 +43,23 @@ export default async function Home({
   const sp = await searchParams;
   const sortRaw = Array.isArray(sp.sort) ? sp.sort[0] : sp.sort;
   const viewRaw = Array.isArray(sp.view) ? sp.view[0] : sp.view;
+  const tabRaw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
   const sort = parseSort(sortRaw);
   const view = parseView(viewRaw);
+  const tab = parseTab(tabRaw);
 
   const supabase = await getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [billCountRes, proposalCountRes, feed] = await Promise.all([
+  const [billCountRes, proposalCountRes, feed, trending] = await Promise.all([
     supabase.from('bills').select('*', { count: 'exact', head: true }),
     supabase
       .from('user_proposals')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'published')
       .eq('moderation_state', 'approved'),
-    loadFeed(supabase, sort, user?.id ?? null, 20, 80),
+    tab === 'feed' ? loadFeed(supabase, sort, user?.id ?? null, 25, 80) : Promise.resolve([]),
+    tab === 'hot' ? loadTrending(supabase, 15) : Promise.resolve([]),
   ]);
 
   const billCount = billCountRes.count ?? 0;
@@ -79,27 +84,35 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Main feed */}
+      {/* Main feed area with tabs */}
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Your vote feed</h2>
-            <p className="text-xs text-muted-foreground">
-              Sorted by {sort === 'recent' ? 'recent activity' : sort === 'newest' ? 'date introduced' : sort === 'supported' ? 'most supported by FiveVote users' : 'most opposed by FiveVote users'}.
+          <FeedTabs current={tab} />
+          {tab === 'feed' ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <FeedSortPills current={sort} />
+              <FeedViewToggle current={view} />
+            </div>
+          ) : null}
+        </div>
+
+        {tab === 'feed' ? (
+          <div className={view === 'deck' ? 'mx-auto max-w-2xl' : 'mx-auto max-w-3xl'}>
+            {view === 'deck' ? (
+              <VoteFeed bills={feed} isSignedIn={!!user} />
+            ) : (
+              <VoteFeedList bills={feed} isSignedIn={!!user} />
+            )}
+          </div>
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Bills with the most community signals right now. Click any to see the full
+              breakdown and cast your own.
             </p>
+            <HotIssuesList bills={trending} />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FeedSortPills current={sort} />
-            <FeedViewToggle current={view} />
-          </div>
-        </div>
-        <div className={view === 'deck' ? 'mx-auto max-w-2xl' : 'mx-auto max-w-3xl'}>
-          {view === 'deck' ? (
-            <VoteFeed bills={feed} isSignedIn={!!user} />
-          ) : (
-            <VoteFeedList bills={feed} isSignedIn={!!user} />
-          )}
-        </div>
+        )}
       </section>
 
       <Separator />

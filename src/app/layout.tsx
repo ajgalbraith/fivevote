@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Landmark, Users, PlusCircle, Bell } from 'lucide-react';
+import { Landmark, Users, PlusCircle, Bell, Vote } from 'lucide-react';
 
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Link>
               {user ? (
                 <>
+                  <Link href="/votes" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                    <Vote />
+                    My votes
+                  </Link>
                   <Link href="/following" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
                     <Bell />
                     Following

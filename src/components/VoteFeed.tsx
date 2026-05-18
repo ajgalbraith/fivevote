@@ -6,6 +6,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Flame,
+  Minus,
   ArrowRight,
   SkipForward,
   Landmark,
@@ -50,6 +51,13 @@ const SIGNALS: {
     buttonOnColor: 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600',
   },
   {
+    key: 'neutral',
+    label: 'Neutral',
+    Icon: Minus,
+    barColor: 'bg-neutral-400',
+    buttonOnColor: 'bg-neutral-700 hover:bg-neutral-800 text-white border-neutral-700',
+  },
+  {
     key: 'oppose',
     label: 'Oppose',
     Icon: ThumbsDown,
@@ -72,7 +80,7 @@ type CardState = {
 };
 
 function totalVotes(c: SignalCounts) {
-  return c.support + c.oppose + c.priority;
+  return c.support + c.oppose + c.priority + c.neutral;
 }
 
 export default function VoteFeed({
@@ -113,7 +121,7 @@ export default function VoteFeed({
           <CheckCircle2 className="mx-auto size-10 text-emerald-600" />
           <div className="text-lg font-semibold">You&apos;re all caught up.</div>
           <div className="text-sm text-muted-foreground">
-            You voted on {bills.length} bills in this feed.
+            You worked through {bills.length} bills. Reload for a fresh batch, or browse all of them.
           </div>
           <div className="flex justify-center gap-2 pt-2">
             <Button variant="outline" size="sm" onClick={() => setIndex(0)}>
@@ -158,20 +166,14 @@ export default function VoteFeed({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          Card <span className="font-mono tabular-nums text-foreground">{index + 1}</span> of{' '}
-          {bills.length}
-        </span>
+        <span>Cast a signal · reload for new bills</span>
         <div className="flex h-1.5 flex-1 mx-4 overflow-hidden rounded-full bg-muted">
           <div
             className="bg-foreground transition-[width] duration-200"
             style={{ width: `${((index + (state.revealed ? 1 : 0)) / bills.length) * 100}%` }}
           />
         </div>
-        <Link
-          href={`/bills/${bill.id}`}
-          className="hover:text-foreground hover:underline"
-        >
+        <Link href={`/bills/${bill.id}`} className="hover:text-foreground hover:underline">
           Open
         </Link>
       </div>
@@ -216,7 +218,7 @@ export default function VoteFeed({
           </div>
 
           {/* Vote buttons */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2 md:grid-cols-4">
             {SIGNALS.map(({ key, label, Icon, buttonOnColor }) => {
               const isOn = state.userSignals.includes(key);
               return (

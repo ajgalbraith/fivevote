@@ -24,12 +24,101 @@ export function parseView(s: string | null | undefined): FeedView {
   return s === 'list' ? 'list' : 'deck';
 }
 
+export type FeedTab = 'feed' | 'hot';
+
+export function parseTab(s: string | null | undefined): FeedTab {
+  return s === 'hot' ? 'hot' : 'feed';
+}
+
+export type TrendingBill = {
+  id: string;
+  bill_number: string;
+  title_en: string | null;
+  plain_english_summary: string | null;
+  sponsor_name: string | null;
+  issue_labels: string[];
+  counts: SignalCounts;
+  total: number;
+};
+
+export async function loadTrending(
+  supabase: SupabaseClient,
+  limit = 15,
+): Promise<TrendingBill[]> {
+  // Order bills by total signal count via the counts view.
+  const { data: countRows } = await supabase
+    .from('bill_signal_counts')
+    .select('bill_id, support_count, oppose_count, priority_count, neutral_count');
+
+  const totals = (countRows ?? [])
+    .map((r) => ({
+      bill_id: r.bill_id as string,
+      counts: {
+        support: r.support_count ?? 0,
+        oppose: r.oppose_count ?? 0,
+        priority: r.priority_count ?? 0,
+        neutral: r.neutral_count ?? 0,
+      },
+      total:
+        (r.support_count ?? 0) +
+        (r.oppose_count ?? 0) +
+        (r.priority_count ?? 0) +
+        (r.neutral_count ?? 0),
+    }))
+    .filter((r) => r.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit);
+
+  if (totals.length === 0) return [];
+
+  const ids = totals.map((t) => t.bill_id);
+  const { data: bills } = await supabase
+    .from('bills')
+    .select(
+      'id, bill_number, title_en, plain_english_summary, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
+    )
+    .in('id', ids);
+
+  const byId = new Map<string, BillListRow>();
+  for (const b of (bills ?? []) as unknown as BillListRow[]) byId.set(b.id, b);
+
+  return totals
+    .map((t) => {
+      const b = byId.get(t.bill_id);
+      if (!b) return null;
+      const sponsor = billSponsor(b);
+      const tags = b.bill_issue_tags
+        .map((x) => (Array.isArray(x.issue_tags) ? x.issue_tags[0] : x.issue_tags))
+        .filter((x): x is { slug: string; display_en: string } => !!x);
+      return {
+        id: b.id,
+        bill_number: b.bill_number,
+        title_en: b.title_en,
+        plain_english_summary: b.plain_english_summary,
+        sponsor_name: sponsor?.name ?? null,
+        issue_labels: tags.map((t) => t.display_en),
+        counts: t.counts,
+        total: t.total,
+      } satisfies TrendingBill;
+    })
+    .filter((r): r is TrendingBill => !!r);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 export async function loadFeed(
   supabase: SupabaseClient,
   sort: FeedSort,
   userId: string | null,
-  limit = 20,
-  pool = 60,
+  limit = 25,
+  pool = 80,
 ): Promise<FeedBill[]> {
   // Always fetch a generous pool ordered by recency so we have data to sort.
   // For "newest" we'll switch to introduced_at after the fetch.
@@ -51,7 +140,7 @@ export async function loadFeed(
 
   const { data: countRows } = await supabase
     .from('bill_signal_counts')
-    .select('bill_id, support_count, oppose_count, priority_count')
+    .select('bill_id, support_count, oppose_count, priority_count, neutral_count')
     .in('bill_id', ids);
 
   const countsByBill = new Map<string, SignalCounts>();
@@ -60,6 +149,7 @@ export async function loadFeed(
       support: r.support_count ?? 0,
       oppose: r.oppose_count ?? 0,
       priority: r.priority_count ?? 0,
+      neutral: r.neutral_count ?? 0,
     });
   }
 
@@ -91,7 +181,7 @@ export async function loadFeed(
       plain_english_summary: r.plain_english_summary,
       sponsor_name: sponsor?.name ?? null,
       issue_labels: tags.map((t) => t.display_en),
-      counts: countsByBill.get(r.id) ?? { support: 0, oppose: 0, priority: 0 },
+      counts: countsByBill.get(r.id) ?? { support: 0, oppose: 0, priority: 0, neutral: 0 },
       userSignals: userSignalsByBill.get(r.id) ?? [],
     };
   });
@@ -107,8 +197,18 @@ export async function loadFeed(
     prepared = [...prepared].sort((a, b) => b.counts.support - a.counts.support);
   } else if (sort === 'opposed') {
     prepared = [...prepared].sort((a, b) => b.counts.oppose - a.counts.oppose);
+  } else {
+    // 'recent' default: shuffle within the recent pool so reloads rotate the deck.
+    prepared = shuffle(prepared);
   }
-  // 'recent' is already the natural order.
+
+  // For signed-in users, surface unvoted bills first so each reload gives them
+  // fresh material to consider.
+  if (userId) {
+    const unvoted = prepared.filter((b) => b.userSignals.length === 0);
+    const voted = prepared.filter((b) => b.userSignals.length > 0);
+    prepared = [...unvoted, ...voted];
+  }
 
   return prepared.slice(0, limit);
 }
