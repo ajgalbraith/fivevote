@@ -16,9 +16,9 @@ import BillSearchBar from '@/components/BillSearchBar';
 import VoteFeed from '@/components/VoteFeed';
 import VoteFeedList from '@/components/VoteFeedList';
 import FeedSortPills from '@/components/FeedSortPills';
-import FeedViewToggle, { parseView } from '@/components/FeedViewToggle';
+import FeedViewToggle from '@/components/FeedViewToggle';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { loadFeed, parseSort } from '@/lib/feed';
+import { loadFeed, parseSort, parseView } from '@/lib/feed';
 
 export const dynamic = 'force-dynamic';
 

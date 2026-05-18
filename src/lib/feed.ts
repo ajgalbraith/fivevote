@@ -18,6 +18,12 @@ export function parseSort(s: string | null | undefined): FeedSort {
   return 'recent';
 }
 
+export type FeedView = 'deck' | 'list';
+
+export function parseView(s: string | null | undefined): FeedView {
+  return s === 'list' ? 'list' : 'deck';
+}
+
 export async function loadFeed(
   supabase: SupabaseClient,
   sort: FeedSort,

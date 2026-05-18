@@ -6,12 +6,7 @@ import { LayoutList, Layers } from 'lucide-react';
 
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-export type FeedView = 'deck' | 'list';
-
-export function parseView(s: string | null | undefined): FeedView {
-  return s === 'list' ? 'list' : 'deck';
-}
+import type { FeedView } from '@/lib/feed';
 
 const VIEWS: { value: FeedView; label: string; Icon: typeof LayoutList }[] = [
   { value: 'deck', label: 'Deck', Icon: Layers },
