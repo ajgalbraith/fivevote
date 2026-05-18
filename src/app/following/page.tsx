@@ -119,16 +119,9 @@ export default async function FollowingPage() {
                           </span>
                         ) : null}
                       </div>
-                      <div className="font-medium leading-snug">{b.title_en ?? '(untitled)'}</div>
-                      {b.plain_english_summary ? (
-                        <div className="line-clamp-2 text-sm text-foreground/90">
-                          {b.plain_english_summary}
-                        </div>
-                      ) : b.latest_action_text ? (
-                        <div className="line-clamp-2 text-sm text-muted-foreground">
-                          Latest: {b.latest_action_text}
-                        </div>
-                      ) : null}
+                      <div className="text-base font-medium leading-snug">
+                        {b.plain_english_summary ?? b.title_en ?? '(untitled)'}
+                      </div>
                       {sponsor ? (
                         <div className="text-xs text-muted-foreground">
                           Sponsored by {sponsor.name}

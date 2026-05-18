@@ -27,7 +27,7 @@ export default async function PersonDetailPage({
 
   const { data: sponsorships } = await supabase
     .from('sponsorships')
-    .select('role, added_at, bills(id, bill_number, chamber, session_label, title_en, status_code, latest_action_at, latest_action_text)')
+    .select('role, added_at, bills(id, bill_number, chamber, session_label, title_en, plain_english_summary, status_code, latest_action_at, latest_action_text)')
     .eq('person_id', id)
     .eq('role', 'sponsor')
     .order('added_at', { ascending: false, nullsFirst: false })
@@ -114,12 +114,9 @@ export default async function PersonDetailPage({
                         </Badge>
                       ) : null}
                     </div>
-                    <div className="font-medium leading-snug">{b.title_en ?? '(untitled)'}</div>
-                    {b.latest_action_text ? (
-                      <div className="line-clamp-2 text-sm text-muted-foreground">
-                        Latest: {b.latest_action_text}
-                      </div>
-                    ) : null}
+                    <div className="text-base font-medium leading-snug">
+                      {(b as { plain_english_summary?: string | null }).plain_english_summary ?? b.title_en ?? '(untitled)'}
+                    </div>
                     {b.latest_action_at ? (
                       <div className="text-xs text-muted-foreground">
                         {new Date(b.latest_action_at).toLocaleDateString()}

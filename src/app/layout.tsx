@@ -1,14 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Landmark, Users, PlusCircle, Bell, Vote } from 'lucide-react';
+import { Landmark, Users, PlusCircle, Bell } from 'lucide-react';
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import SignOutButton from '@/components/SignOutButton';
 
 const geistSans = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -48,10 +49,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Link>
               {user ? (
                 <>
-                  <Link href="/votes" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-                    <Vote />
-                    My votes
-                  </Link>
                   <Link href="/following" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
                     <Bell />
                     Following
@@ -60,7 +57,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     <PlusCircle />
                     New proposal
                   </Link>
-                  <SignOutButton />
+                  <Link
+                    href="/profile"
+                    aria-label="Profile"
+                    className="ml-1 inline-flex items-center"
+                  >
+                    <Avatar className="size-8 transition hover:ring-2 hover:ring-ring/40">
+                      <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+                        {(user.email ?? 'U')
+                          .split(/[@._]/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((p) => p[0]?.toUpperCase() ?? '')
+                          .join('') || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
                 </>
               ) : (
                 <Link href="/auth" className={buttonVariants({ variant: 'outline', size: 'sm' })}>

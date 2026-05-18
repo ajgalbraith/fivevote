@@ -75,13 +75,41 @@ async function fetchJson(url) {
   return res.json();
 }
 
-function deriveBillFields(detail) {
+function stripHtml(s) {
+  return s
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function fetchOfficialSummary(detailUrlBase) {
+  // Congress.gov /bill/{cong}/{type}/{num}/summaries returns a list of CRS summaries.
+  // We take the most recent one.
+  try {
+    const url = `${detailUrlBase}/summaries?api_key=${API_KEY}`;
+    const data = await fetchJson(url);
+    const summaries = data.summaries ?? [];
+    if (!summaries.length) return null;
+    const latest = summaries[summaries.length - 1];
+    return latest.text ? stripHtml(latest.text) : null;
+  } catch {
+    return null;
+  }
+}
+
+function deriveBillFields(detail, fetchedSummaryText) {
   const bill = detail.bill ?? detail;
   const number = bill.number ?? bill.billNumber;
   const type = (bill.type ?? bill.billType ?? '').toLowerCase();
   const congress = bill.congress;
   const chamberMap = { hr: 'House', s: 'Senate', hjres: 'House', sjres: 'Senate', hconres: 'House', sconres: 'Senate', hres: 'House', sres: 'Senate' };
   const chamber = chamberMap[type] ?? bill.originChamber ?? null;
+
+  const inlineSummary = bill.summaries?.summaries?.[0]?.text;
+  const summaryEn = fetchedSummaryText ?? (inlineSummary ? stripHtml(inlineSummary) : null);
 
   return {
     source_id: `${congress}-${type}-${number}`,
@@ -90,7 +118,7 @@ function deriveBillFields(detail) {
     bill_number: `${type.toUpperCase()}.${number}`,
     bill_type: type,
     title_en: bill.title ?? null,
-    summary_en: bill.summaries?.summaries?.[0]?.text?.replace(/<[^>]+>/g, '') ?? null,
+    summary_en: summaryEn,
     status_code: bill.latestAction?.actionTime ? null : null,
     introduced_at: bill.introducedDate ? new Date(bill.introducedDate).toISOString() : null,
     latest_action_at: bill.latestAction?.actionDate
@@ -128,11 +156,16 @@ async function recordArtifact(url, payload) {
 }
 
 async function ingestBill(listEntry) {
+  const baseUrl = listEntry.url.replace(/\?.*$/, '');
   const detailUrl = listEntry.url + (listEntry.url.includes('?') ? '&' : '?') + `api_key=${API_KEY}`;
   const detail = await fetchJson(detailUrl);
   const sanitized = JSON.parse(JSON.stringify(detail));
   const artifactId = await recordArtifact(listEntry.url, sanitized);
-  const fields = deriveBillFields(detail);
+  // The bill detail says summaries.count but doesn't include the text — fetch it.
+  const summaryFetched = (detail.bill?.summaries?.count ?? 0) > 0
+    ? await fetchOfficialSummary(baseUrl)
+    : null;
+  const fields = deriveBillFields(detail, summaryFetched);
 
   const row = {
     jurisdiction_id: US_FEDERAL_JURISDICTION_ID,

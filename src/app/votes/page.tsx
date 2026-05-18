@@ -135,12 +135,9 @@ export default async function MyVotesPage() {
                             Voted {new Date(row.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="font-medium leading-snug">{bill.title_en ?? '(untitled)'}</div>
-                        {bill.plain_english_summary ? (
-                          <div className="line-clamp-2 text-sm text-muted-foreground">
-                            {bill.plain_english_summary}
-                          </div>
-                        ) : null}
+                        <div className="text-base font-medium leading-snug">
+                          {bill.plain_english_summary ?? bill.title_en ?? '(untitled)'}
+                        </div>
                       </CardContent>
                     </Card>
                   </Link>

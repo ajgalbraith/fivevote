@@ -48,12 +48,9 @@ export default function HotIssuesList({ bills }: { bills: TrendingBill[] }) {
                     <span>signals</span>
                   </span>
                 </div>
-                <div className="font-medium leading-snug">{bill.title_en ?? '(untitled)'}</div>
-                {bill.plain_english_summary ? (
-                  <div className="line-clamp-2 text-sm text-foreground/80">
-                    {bill.plain_english_summary}
-                  </div>
-                ) : null}
+                <div className="text-base font-medium leading-snug">
+                  {bill.plain_english_summary ?? bill.title_en ?? '(untitled)'}
+                </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                   <span className="flex items-center gap-1">
                     <span className="inline-block size-2 rounded-full bg-emerald-600" />

@@ -131,14 +131,9 @@ export default async function BillsPage({
                             </Badge>
                           ) : null}
                         </div>
-                        <div className="font-medium leading-snug">
-                          {b.title_en ?? '(untitled)'}
+                        <div className="text-base font-medium leading-snug">
+                          {b.plain_english_summary ?? b.title_en ?? '(untitled)'}
                         </div>
-                        {b.plain_english_summary ? (
-                          <div className="line-clamp-2 text-sm text-foreground/90">
-                            {b.plain_english_summary}
-                          </div>
-                        ) : null}
                         {sponsor ? (
                           <div className="text-xs text-muted-foreground">
                             Sponsored by{' '}

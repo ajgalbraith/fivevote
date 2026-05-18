@@ -190,14 +190,8 @@ export default function VoteFeed({
           </div>
 
           <h2 className="text-xl font-semibold leading-snug">
-            {bill.title_en ?? '(untitled)'}
+            {bill.plain_english_summary ?? bill.title_en ?? '(untitled)'}
           </h2>
-
-          {bill.plain_english_summary ? (
-            <p className="text-base leading-relaxed text-foreground/90">
-              {bill.plain_english_summary}
-            </p>
-          ) : null}
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             {bill.sponsor_name ? (

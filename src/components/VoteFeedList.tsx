@@ -140,13 +140,9 @@ export default function VoteFeedList({
                 </Link>
               </div>
 
-              <div className="font-medium leading-snug">{bill.title_en ?? '(untitled)'}</div>
-
-              {bill.plain_english_summary ? (
-                <p className="line-clamp-3 text-sm text-foreground/90">
-                  {bill.plain_english_summary}
-                </p>
-              ) : null}
+              <div className="text-base font-medium leading-snug">
+                {bill.plain_english_summary ?? bill.title_en ?? '(untitled)'}
+              </div>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 {bill.sponsor_name ? (
