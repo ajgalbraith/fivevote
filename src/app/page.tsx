@@ -1,11 +1,5 @@
 import Link from 'next/link';
-import {
-  Landmark,
-  Users,
-  ArrowRight,
-  ScrollText,
-  Sparkles,
-} from 'lucide-react';
+import { Landmark, Users, ArrowRight, ScrollText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -19,8 +13,10 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import BillSearchBar from '@/components/BillSearchBar';
+import VoteFeed from '@/components/VoteFeed';
+import FeedSortPills from '@/components/FeedSortPills';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
-import { bilTagSlugs, queryBills } from '@/lib/bills/query';
+import { loadFeed, parseSort } from '@/lib/feed';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,81 +31,80 @@ const FEATURED_ISSUES = [
   { slug: 'education', label: 'Education' },
 ];
 
-export default async function Home() {
-  const supabase = await getSupabaseServerClient();
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const sortRaw = Array.isArray(sp.sort) ? sp.sort[0] : sp.sort;
+  const sort = parseSort(sortRaw);
 
-  const [billCountRes, proposalCountRes, trending] = await Promise.all([
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [billCountRes, proposalCountRes, feed] = await Promise.all([
     supabase.from('bills').select('*', { count: 'exact', head: true }),
     supabase
       .from('user_proposals')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'published')
       .eq('moderation_state', 'approved'),
-    queryBills(supabase, {}, 5).catch(() => ({ data: [], count: 0 })),
+    loadFeed(supabase, sort, user?.id ?? null, 20, 80),
   ]);
 
   const billCount = billCountRes.count ?? 0;
   const proposalCount = proposalCountRes.count ?? 0;
 
   return (
-    <div className="space-y-16">
-      {/* Hero */}
-      <section className="space-y-6">
+    <div className="space-y-10">
+      {/* Compact hero */}
+      <section className="space-y-3">
         <Badge variant="outline">Open civic data · advisory voting</Badge>
-        <h1 className="max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight md:text-5xl">
+        <h1 className="max-w-3xl text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
           Vote where you stand on every bill.
         </h1>
-        <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-          Track official U.S. federal legislation. Surface community proposals. FiveVote is{' '}
-          <span className="font-medium text-foreground">advisory civic signaling</span>
-          {' '}— it does not replace elections, referendums, or legislative votes.
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          A curated feed of U.S. federal legislation. Tap how you&apos;d vote, then see how
+          others voted.{' '}
+          <span className="font-medium text-foreground">Advisory civic signaling</span> —
+          does not replace elections, referendums, or legislative votes.
         </p>
-        <div className="max-w-2xl">
+        <div className="max-w-2xl pt-1">
           <BillSearchBar size="lg" />
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Try:</span>
-          <Link
-            href="/bills?country=US&level=federal"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            US federal
-          </Link>
-          <Link
-            href="/bills?since=week"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            Active this week
-          </Link>
-          <Link
-            href="/bills?issue=health"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            Health
-          </Link>
-          <Link
-            href="/bills?issue=housing"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-          >
-            Housing
-          </Link>
         </div>
       </section>
 
-      {/* Three section cards */}
+      {/* Main feed */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Your vote feed</h2>
+            <p className="text-xs text-muted-foreground">
+              Sorted by {sort === 'recent' ? 'recent activity' : sort === 'newest' ? 'date introduced' : sort === 'supported' ? 'most supported by FiveVote users' : 'most opposed by FiveVote users'}.
+            </p>
+          </div>
+          <FeedSortPills current={sort} />
+        </div>
+        <div className="mx-auto max-w-2xl">
+          <VoteFeed bills={feed} isSignedIn={!!user} />
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* Section cards */}
       <section className="grid gap-4 md:grid-cols-3">
         <SectionCard
-          tone="official"
           icon={<Landmark className="size-4 text-muted-foreground" />}
           badge={<Badge variant="default">Official</Badge>}
           title="Government bills"
-          description="Active legislation pulled directly from Congress.gov, with provenance preserved."
+          description="Active legislation pulled directly from Congress.gov."
           metric={billCount}
           metricLabel="tracked bills"
           href="/bills"
         />
         <SectionCard
-          tone="laws"
           icon={<ScrollText className="size-4 text-muted-foreground" />}
           badge={<Badge variant="outline">Coming next</Badge>}
           title="Existing laws"
@@ -120,18 +115,17 @@ export default async function Home() {
           disabled
         />
         <SectionCard
-          tone="community"
           icon={<Users className="size-4 text-muted-foreground" />}
           badge={<Badge variant="secondary">Community</Badge>}
           title="Citizen proposals"
-          description="Ideas authored by FiveVote users. Clearly labeled. Separately governed."
+          description="Ideas authored by FiveVote users. Separately governed."
           metric={proposalCount}
           metricLabel="published proposals"
           href="/proposals"
         />
       </section>
 
-      {/* Follow issues teaser */}
+      {/* Follow issues */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between">
           <h2 className="text-base font-semibold">Follow issues you care about</h2>
@@ -147,78 +141,10 @@ export default async function Home() {
               {i.label}
             </Link>
           ))}
-          <Link
-            href="/bills"
-            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-          >
+          <Link href="/bills" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
             All issues <ArrowRight />
           </Link>
         </div>
-      </section>
-
-      <Separator />
-
-      {/* Trending */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-muted-foreground" />
-            <h2 className="text-base font-semibold">Most recent activity</h2>
-          </div>
-          <Link
-            href="/bills"
-            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-          >
-            See all <ArrowRight />
-          </Link>
-        </div>
-        {trending.data.length === 0 ? (
-          <Card>
-            <CardContent className="py-6 text-center text-sm text-muted-foreground">
-              No bills ingested yet.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-3">
-            {trending.data.map((b) => {
-              const tags = bilTagSlugs(b).slice(0, 3);
-              return (
-                <Link key={b.id} href={`/bills/${b.id}`} className="block">
-                  <Card className="transition hover:border-foreground/20">
-                    <CardContent className="space-y-2 p-4">
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="default" className="gap-1">
-                          <Landmark className="size-3" /> Official
-                        </Badge>
-                        <span className="font-mono font-medium text-foreground">
-                          {b.bill_number}
-                        </span>
-                        {b.chamber ? <span>· {b.chamber}</span> : null}
-                        {b.latest_action_at ? (
-                          <span className="ml-auto">
-                            {new Date(b.latest_action_at).toLocaleDateString()}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="font-medium leading-snug">
-                        {b.title_en ?? '(untitled)'}
-                      </div>
-                      {tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((t) => (
-                            <Badge key={t.slug} variant="outline" className="text-[0.7rem] font-normal">
-                              {t.display_en}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </section>
 
       <Separator />
@@ -248,7 +174,6 @@ function SectionCard({
   href,
   disabled,
 }: {
-  tone: 'official' | 'community' | 'laws';
   icon: React.ReactNode;
   badge: React.ReactNode;
   title: string;
@@ -285,9 +210,6 @@ function SectionCard({
       </CardFooter>
     </Card>
   );
-
-  if (disabled) {
-    return <div>{content}</div>;
-  }
+  if (disabled) return <div>{content}</div>;
   return <Link href={href}>{content}</Link>;
 }
