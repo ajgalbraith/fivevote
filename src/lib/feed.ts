@@ -4,9 +4,10 @@ import { billSponsor, type BillListRow } from '@/lib/bills/query';
 import type { FeedBill } from '@/components/VoteFeed';
 import type { BillSignal, SignalCounts } from '@/app/bills/actions';
 
-export type FeedSort = 'recent' | 'newest' | 'supported' | 'opposed';
+export type FeedSort = 'interesting' | 'recent' | 'newest' | 'supported' | 'opposed';
 
 export const FEED_SORTS: { value: FeedSort; label: string }[] = [
+  { value: 'interesting', label: 'Interesting' },
   { value: 'recent', label: 'Recent activity' },
   { value: 'newest', label: 'Newest' },
   { value: 'supported', label: 'Most supported' },
@@ -14,8 +15,15 @@ export const FEED_SORTS: { value: FeedSort; label: string }[] = [
 ];
 
 export function parseSort(s: string | null | undefined): FeedSort {
-  if (s === 'newest' || s === 'supported' || s === 'opposed' || s === 'recent') return s;
-  return 'recent';
+  if (
+    s === 'interesting' ||
+    s === 'newest' ||
+    s === 'supported' ||
+    s === 'opposed' ||
+    s === 'recent'
+  )
+    return s;
+  return 'interesting';
 }
 
 export type FeedView = 'deck' | 'list';
@@ -104,13 +112,20 @@ export async function loadTrending(
     .filter((r): r is TrendingBill => !!r);
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
+// Interest-weighted shuffle: probability of an item ranking high scales with its
+// interest score. A bill scored 80 is ~4x more likely to surface than one at 20.
+function weightedShuffle<T>(items: T[], weight: (item: T) => number): T[] {
+  return [...items]
+    .map((item) => {
+      // Gumbel trick: ranking by -log(-log(u))/w yields a sample without replacement
+      // weighted by w. We just need ranks, so any monotone transform works.
+      const w = Math.max(1, weight(item));
+      const u = Math.random();
+      const r = -Math.log(-Math.log(u + 1e-12) + 1e-12) / w;
+      return { item, r };
+    })
+    .sort((a, b) => b.r - a.r)
+    .map(({ item }) => item);
 }
 
 export async function loadFeed(
@@ -125,7 +140,7 @@ export async function loadFeed(
   const { data: bills } = await supabase
     .from('bills')
     .select(
-      'id, bill_number, chamber, session_label, title_en, plain_english_summary, introduced_at, latest_action_at, latest_action_text, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
+      'id, bill_number, chamber, session_label, title_en, plain_english_summary, interest_score, introduced_at, latest_action_at, latest_action_text, bill_issue_tags(issue_tags(slug, display_en)), sponsorships(role, persons(id, name, party, state_or_province))',
     )
     .not('plain_english_summary', 'is', null)
     .order('latest_action_at', { ascending: false, nullsFirst: false })
@@ -133,7 +148,11 @@ export async function loadFeed(
 
   const rows = (bills ?? []) as unknown as (BillListRow & {
     introduced_at: string | null;
+    interest_score: number | null;
   })[];
+
+  const interestOf = (id: string): number =>
+    rows.find((r) => r.id === id)?.interest_score ?? 50;
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id);
@@ -197,9 +216,13 @@ export async function loadFeed(
     prepared = [...prepared].sort((a, b) => b.counts.support - a.counts.support);
   } else if (sort === 'opposed') {
     prepared = [...prepared].sort((a, b) => b.counts.oppose - a.counts.oppose);
+  } else if (sort === 'interesting') {
+    // Pure interest-score order, ties broken by recency (already the natural order).
+    prepared = [...prepared].sort((a, b) => interestOf(b.id) - interestOf(a.id));
   } else {
-    // 'recent' default: shuffle within the recent pool so reloads rotate the deck.
-    prepared = shuffle(prepared);
+    // 'recent' default: weighted shuffle — higher interest bills are more likely
+    // to surface, but every reload still rotates the deck.
+    prepared = weightedShuffle(prepared, (b) => interestOf(b.id));
   }
 
   // For signed-in users, surface unvoted bills first so each reload gives them
