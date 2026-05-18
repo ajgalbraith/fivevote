@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { billSponsor, type BillListRow } from '@/lib/bills/query';
-import type { FeedBill } from '@/components/VoteFeed';
+import type { FeedBill, RecentVote } from '@/components/VoteFeed';
 import type { BillSignal, SignalCounts } from '@/app/bills/actions';
 
 export type FeedSort = 'interesting' | 'recent' | 'newest' | 'supported' | 'opposed';
@@ -186,6 +186,32 @@ export async function loadFeed(
     }
   }
 
+  // Recent community votes per bill (last ~30 from this pool, then bucketed to top 3 each).
+  const { data: recent } = await supabase
+    .from('bill_signals')
+    .select('bill_id, signal, created_at, profiles(display_name)')
+    .in('bill_id', ids)
+    .order('created_at', { ascending: false })
+    .limit(ids.length * 8);
+
+  const recentByBill = new Map<string, RecentVote[]>();
+  for (const r of (recent ?? []) as Array<{
+    bill_id: string;
+    signal: string;
+    created_at: string;
+    profiles: { display_name: string | null } | { display_name: string | null }[] | null;
+  }>) {
+    const arr = recentByBill.get(r.bill_id) ?? [];
+    if (arr.length >= 3) continue;
+    const prof = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
+    arr.push({
+      signal: r.signal as BillSignal,
+      display_name: prof?.display_name?.trim() || 'A FiveVote user',
+      created_at: r.created_at,
+    });
+    recentByBill.set(r.bill_id, arr);
+  }
+
   let prepared: FeedBill[] = rows.map((r) => {
     const sponsor = billSponsor(r);
     const tags = r.bill_issue_tags
@@ -202,6 +228,7 @@ export async function loadFeed(
       issue_labels: tags.map((t) => t.display_en),
       counts: countsByBill.get(r.id) ?? { support: 0, oppose: 0, priority: 0, neutral: 0 },
       userSignals: userSignalsByBill.get(r.id) ?? [],
+      recentVotes: recentByBill.get(r.id) ?? [],
     };
   });
 

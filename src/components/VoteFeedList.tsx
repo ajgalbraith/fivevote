@@ -7,6 +7,7 @@ import { ThumbsUp, ThumbsDown, Flame, Minus, Landmark, ExternalLink } from 'luci
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import RecentVotesStrip from '@/components/RecentVotesStrip';
 import {
   castBillSignal,
   type BillSignal,
@@ -183,6 +184,10 @@ export default function VoteFeedList({
                   );
                 })}
               </div>
+
+              {bill.recentVotes.length > 0 ? (
+                <RecentVotesStrip votes={bill.recentVotes} />
+              ) : null}
 
               {state.revealed && total > 0 ? (
                 <div className="space-y-1 pt-1">

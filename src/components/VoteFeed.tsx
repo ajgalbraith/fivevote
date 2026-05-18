@@ -17,11 +17,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import RecentVotesStrip from '@/components/RecentVotesStrip';
 import {
   castBillSignal,
   type BillSignal,
   type SignalCounts,
 } from '@/app/bills/actions';
+
+export type RecentVote = {
+  signal: BillSignal;
+  display_name: string;
+  created_at: string;
+};
 
 export type FeedBill = {
   id: string;
@@ -34,6 +41,7 @@ export type FeedBill = {
   issue_labels: string[];
   counts: SignalCounts;
   userSignals: BillSignal[];
+  recentVotes: RecentVote[];
 };
 
 const SIGNALS: {
@@ -242,6 +250,9 @@ export default function VoteFeed({
               to cast a signal.
             </p>
           ) : null}
+
+          {/* Recent community votes */}
+          <RecentVotesStrip votes={bill.recentVotes} />
 
           {/* Revealed results */}
           {state.revealed ? (
